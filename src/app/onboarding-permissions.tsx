@@ -11,6 +11,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Activity, Clock, Bell, ChevronRight, Check } from 'lucide-react-native';
+import { healthService } from '@/lib/health';
+import { notificationService } from '@/lib/notifications';
+import { requestScreenTimeAuthorization } from '@/lib/screen-time';
 
 const PERMISSIONS = [
   {
@@ -44,12 +47,44 @@ export default function OnboardingPermissionsScreen() {
 
   const handleGrantPermission = async (permissionId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsLoading(true);
+    let success = false;
 
-    // Simulate permission request
-    new Promise((resolve) => setTimeout(resolve, 500)).then(() => {
-      setGranted((prev) => new Set([...prev, permissionId]));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    });
+    try {
+      if (permissionId === 'motion') {
+        console.log('Requesting motion permission via healthService...');
+        alert('Requesting Motion & Fitness permission...');
+        success = await healthService.requestPermissions();
+        console.log('Motion permission result:', success);
+        if (!success) alert('Motion permission was denied or failed');
+      } else if (permissionId === 'screen-time') {
+        console.log('Requesting screen time permission...');
+        alert('Requesting Screen Time permission...');
+        success = await requestScreenTimeAuthorization();
+        console.log('Screen time permission result:', success);
+        if (!success) alert('Screen Time permission was denied or failed');
+      } else if (permissionId === 'notifications') {
+        console.log('Requesting notification permission...');
+        alert('Requesting Notification permission...');
+        success = await notificationService.requestPermissions();
+        console.log('Notification permission result:', success);
+        if (!success) alert('Notification permission was denied or failed');
+      }
+
+      if (success) {
+        setGranted((prev) => new Set([...prev, permissionId]));
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        alert(`${permissionId} granted successfully!`);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (error) {
+      console.error(`Error granting ${permissionId}:`, error);
+      alert(`Error granting ${permissionId}: ${JSON.stringify(error)}`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleContinue = () => {
@@ -234,16 +269,6 @@ export default function OnboardingPermissionsScreen() {
                 </LinearGradient>
               </Pressable>
 
-              {granted.size < 3 && (
-                <Pressable onPress={handleContinue} disabled={isLoading}>
-                  <Text
-                    className="text-lumis-sunrise text-center text-base"
-                    style={{ fontFamily: 'Outfit_500Medium' }}
-                  >
-                    Maybe later
-                  </Text>
-                </Pressable>
-              )}
             </View>
           </View>
         </ScrollView>

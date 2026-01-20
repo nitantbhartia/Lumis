@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
+import { Syne_700Bold, Syne_800ExtraBold } from '@expo-google-fonts/syne';
 import { useEffect } from 'react';
 
 export const unstable_settings = {
@@ -74,6 +75,8 @@ export default function RootLayout() {
     Outfit_500Medium,
     Outfit_600SemiBold,
     Outfit_700Bold,
+    Syne_700Bold,
+    Syne_800ExtraBold,
   });
 
   useEffect(() => {

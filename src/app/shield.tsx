@@ -15,8 +15,9 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Sun, AlertTriangle, X } from 'lucide-react-native';
+import { Sun, AlertTriangle, X, Footprints } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
+import { GlassCard } from '@/components/GlassCard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -201,33 +202,75 @@ export default function ShieldScreen() {
               className="text-4xl text-lumis-dawn text-center mb-4"
               style={{ fontFamily: 'Outfit_700Bold' }}
             >
-              Earn Your Scroll
+              LOCKED
             </Text>
             <Text
               className="text-lg text-lumis-sunrise/70 text-center mb-8"
               style={{ fontFamily: 'Outfit_400Regular' }}
             >
-              Step into the light to unlock your apps.{'\n'}
-              {minutesRemaining.toFixed(1)} minutes of sunlight to go.
+              Your feed is waiting. {minutesRemaining.toFixed(0)} min{'\n'}
+              of real light stands in the way.
             </Text>
 
             {/* Progress indicator */}
-            <View className="bg-lumis-twilight/40 rounded-2xl px-6 py-4 mb-8">
+            <GlassCard variant="elevated" className="mb-4">
+              <View className="flex-row items-center mb-3">
+                <View className="w-12 h-12 rounded-2xl bg-lumis-golden/20 items-center justify-center mr-3">
+                  <Sun size={24} color="#FFB347" strokeWidth={1.5} />
+                </View>
+                <View className="flex-1">
+                  <Text
+                    className="text-lumis-dawn text-base"
+                    style={{ fontFamily: 'Outfit_600SemiBold' }}
+                  >
+                    {todayProgress.lightMinutes.toFixed(1)} / {dailyGoalMinutes} min
+                  </Text>
+                  <Text
+                    className="text-lumis-sunrise/60 text-sm"
+                    style={{ fontFamily: 'Outfit_400Regular' }}
+                  >
+                    Light absorbed
+                  </Text>
+                </View>
+              </View>
               <View className="flex-row items-center">
-                <View className="flex-1 h-2 bg-lumis-dusk rounded-full mr-4">
+                <View className="flex-1 h-2.5 bg-lumis-dusk rounded-full mr-3">
                   <View
                     className="h-full bg-lumis-golden rounded-full"
                     style={{ width: `${Math.min(progress * 100, 100)}%` }}
                   />
                 </View>
                 <Text
-                  className="text-lumis-golden"
-                  style={{ fontFamily: 'Outfit_600SemiBold' }}
+                  className="text-lumis-golden text-base"
+                  style={{ fontFamily: 'Outfit_700Bold' }}
                 >
                   {Math.round(progress * 100)}%
                 </Text>
               </View>
-            </View>
+            </GlassCard>
+
+            {/* Steps counter */}
+            <GlassCard variant="flat" className="mb-8">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-2xl bg-info/20 items-center justify-center mr-3">
+                  <Footprints size={20} color="#3B82F6" strokeWidth={1.5} />
+                </View>
+                <View className="flex-1">
+                  <Text
+                    className="text-lumis-dawn text-base"
+                    style={{ fontFamily: 'Outfit_600SemiBold' }}
+                  >
+                    {todayProgress.steps.toLocaleString()} steps
+                  </Text>
+                  <Text
+                    className="text-lumis-sunrise/60 text-xs"
+                    style={{ fontFamily: 'Outfit_400Regular' }}
+                  >
+                    You're in motion.
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
           </Animated.View>
 
           {/* Actions */}
@@ -266,7 +309,7 @@ export default function ShieldScreen() {
                     className="text-lumis-night text-lg ml-2"
                     style={{ fontFamily: 'Outfit_600SemiBold' }}
                   >
-                    Go Outside Now
+                    Start Tracking
                   </Text>
                 </LinearGradient>
               </Pressable>
@@ -282,21 +325,23 @@ export default function ShieldScreen() {
                   className="text-lumis-sunrise/40 text-center text-sm"
                   style={{ fontFamily: 'Outfit_400Regular' }}
                 >
-                  Need emergency access?
+                  Can't wait?
                 </Text>
               </Pressable>
             )}
 
             {showEmergency && !emergencyUnlockUsedToday && (
               <Animated.View entering={FadeIn.duration(300)} className="mt-4">
-                <View className="bg-lumis-deep/20 border border-lumis-deep/40 rounded-2xl p-4 mb-4">
+                <GlassCard variant="default" className="mb-4" glow>
                   <View className="flex-row items-center mb-2">
-                    <AlertTriangle size={18} color="#DC2F02" strokeWidth={2} />
+                    <View className="w-10 h-10 rounded-2xl bg-error/20 items-center justify-center mr-2">
+                      <AlertTriangle size={20} color="#EF4444" strokeWidth={2} />
+                    </View>
                     <Text
-                      className="text-lumis-deep ml-2"
+                      className="text-error text-base"
                       style={{ fontFamily: 'Outfit_600SemiBold' }}
                     >
-                      This will break your streak
+                      Your streak will reset.
                     </Text>
                   </View>
                   <Text
@@ -305,18 +350,15 @@ export default function ShieldScreen() {
                   >
                     Emergency unlock gives you 15 minutes of access but resets your current streak.
                   </Text>
-                </View>
-                <Pressable
-                  onPress={handleEmergencyUnlock}
-                  className="bg-lumis-twilight/50 border border-lumis-dusk rounded-xl py-3"
-                >
+                </GlassCard>
+                <GlassCard variant="flat" onPress={handleEmergencyUnlock}>
                   <Text
-                    className="text-lumis-sunrise/70 text-center"
-                    style={{ fontFamily: 'Outfit_500Medium' }}
+                    className="text-lumis-sunrise text-center"
+                    style={{ fontFamily: 'Outfit_600SemiBold' }}
                   >
                     Emergency Unlock (15 min)
                   </Text>
-                </Pressable>
+                </GlassCard>
               </Animated.View>
             )}
 

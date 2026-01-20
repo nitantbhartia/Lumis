@@ -1,0 +1,11 @@
+{
+    "name": "lumis-screen-time",
+    "platforms": [
+        "ios"
+    ],
+    "ios": {
+        "modules": [
+            "LumisScreenTimeModule"
+        ]
+    }
+}

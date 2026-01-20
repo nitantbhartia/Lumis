@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { Sun, Footprints, X, AlertCircle, Check } from 'lucide-react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
+import { unblockApps } from '@/lib/screen-time';
 
 // Import sensors with platform check
 let LightSensor: any;
@@ -34,11 +35,11 @@ if (Platform !== undefined && Platform.OS !== 'web') {
 }
 
 // Provide mock subscriptions for web
-const createMockSubscription = () => ({ remove: () => {} });
+const createMockSubscription = () => ({ remove: () => { } });
 const LightSensorMock = {
   isAvailableAsync: async () => false,
   addListener: () => createMockSubscription(),
-  setUpdateInterval: () => {},
+  setUpdateInterval: () => { },
 };
 const PedometerMock = {
   isAvailableAsync: async () => false,
@@ -170,9 +171,11 @@ export default function TrackingScreen() {
     let subscription: { remove: () => void } | null = null;
 
     if (sensorAvailable) {
-      subscription = useLightSensor.addListener((data: { illuminance: number }) => {
-        setCurrentLux(Math.round(data.illuminance));
-        setIsOutdoors(data.illuminance > lightThreshold);
+      subscription = useLightSensor.addListener((data: any) => {
+        const rawValue = typeof data === 'number' ? data : (data?.illuminance ?? 0);
+        const lux = Math.round(Number(rawValue) || 0);
+        setCurrentLux(lux);
+        setIsOutdoors(lux > lightThreshold);
       });
       useLightSensor.setUpdateInterval(500);
     } else {
@@ -242,6 +245,10 @@ export default function TrackingScreen() {
     if (isGoalReached && !todayProgress.completed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // UNBLOCK APPS - User earned their screen time!
+      const unblockResult = unblockApps();
+      console.log('[Tracking] Unblocking apps, result:', unblockResult);
+
       // Save progress
       const completedProgress = {
         ...todayProgress,
@@ -301,13 +308,13 @@ export default function TrackingScreen() {
                 className="text-lumis-sunrise/60"
                 style={{ fontFamily: 'Outfit_400Regular' }}
               >
-                {isEarning ? 'Earning light credits' : 'Waiting for conditions...'}
+                {isEarning ? "You're in the light" : 'Seeking sun...'}
               </Text>
               <Text
                 className="text-lumis-dawn text-xl"
                 style={{ fontFamily: 'Outfit_600SemiBold' }}
               >
-                Active Tracking
+                Live Session
               </Text>
             </View>
             <Pressable
@@ -349,9 +356,8 @@ export default function TrackingScreen() {
               <View className="absolute inset-0 items-center justify-center">
                 <Animated.View style={pulseStyle}>
                   <View
-                    className={`w-28 h-28 rounded-full items-center justify-center ${
-                      isEarning ? 'bg-lumis-golden/20' : 'bg-lumis-twilight/50'
-                    }`}
+                    className={`w-28 h-28 rounded-full items-center justify-center ${isEarning ? 'bg-lumis-golden/20' : 'bg-lumis-twilight/50'
+                      }`}
                     style={{
                       shadowColor: '#FFB347',
                       shadowOffset: { width: 0, height: 0 },
@@ -401,9 +407,8 @@ export default function TrackingScreen() {
             {/* Light status */}
             <View className="flex-row items-center mb-4">
               <View
-                className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${
-                  isOutdoors ? 'bg-lumis-golden/20' : 'bg-lumis-twilight/50'
-                }`}
+                className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isOutdoors ? 'bg-lumis-golden/20' : 'bg-lumis-twilight/50'
+                  }`}
               >
                 <Sun size={24} color={isOutdoors ? '#FFB347' : '#FFB34760'} strokeWidth={1.5} />
               </View>
@@ -431,9 +436,8 @@ export default function TrackingScreen() {
             {/* Movement status */}
             <View className="flex-row items-center mb-6">
               <View
-                className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${
-                  isMoving ? 'bg-lumis-golden/20' : 'bg-lumis-twilight/50'
-                }`}
+                className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${isMoving ? 'bg-lumis-golden/20' : 'bg-lumis-twilight/50'
+                  }`}
               >
                 <Footprints size={24} color={isMoving ? '#FFB347' : '#FFB34760'} strokeWidth={1.5} />
               </View>
@@ -460,19 +464,17 @@ export default function TrackingScreen() {
 
             {/* Status message */}
             <View
-              className={`rounded-2xl p-4 ${
-                isEarning ? 'bg-lumis-golden/10 border border-lumis-golden/30' : 'bg-lumis-twilight/30 border border-lumis-dusk/30'
-              }`}
+              className={`rounded-2xl p-4 ${isEarning ? 'bg-lumis-golden/10 border border-lumis-golden/30' : 'bg-lumis-twilight/30 border border-lumis-dusk/30'}`}
             >
               <Text
                 className={`text-center ${isEarning ? 'text-lumis-golden' : 'text-lumis-sunrise/60'}`}
                 style={{ fontFamily: 'Outfit_500Medium' }}
               >
                 {isEarning
-                  ? 'Keep walking in the light to earn credits!'
+                  ? 'Keep moving — every step counts.'
                   : !isOutdoors
-                    ? 'Move to a brighter outdoor area'
-                    : 'Start walking to earn light credits'}
+                    ? 'Find the sun. Open a door.'
+                    : "Great light! Now let's move."}
               </Text>
             </View>
           </View>

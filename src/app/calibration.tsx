@@ -29,11 +29,11 @@ if (Platform !== undefined && Platform.OS !== 'web') {
 }
 
 // Provide mock subscription for web
-const createMockSubscription = () => ({ remove: () => {} });
+const createMockSubscription = () => ({ remove: () => { } });
 const LightSensorMock = {
   isAvailableAsync: async () => false,
   addListener: () => createMockSubscription(),
-  setUpdateInterval: () => {},
+  setUpdateInterval: () => { },
 };
 
 // Use mock if sensor not loaded
@@ -71,8 +71,10 @@ export default function CalibrationScreen() {
 
   useEffect(() => {
     if (isReading && sensorAvailable) {
-      const subscription = useLightSensor.addListener((data: { illuminance: number }) => {
-        setCurrentLux(Math.round(data.illuminance));
+      const subscription = useLightSensor.addListener((data: any) => {
+        const rawValue = typeof data === 'number' ? data : (data?.illuminance ?? 0);
+        const lux = Math.round(Number(rawValue) || 0);
+        setCurrentLux(lux);
       });
       useLightSensor.setUpdateInterval(100);
       return () => subscription.remove();
@@ -276,21 +278,19 @@ export default function CalibrationScreen() {
             {['indoor', 'outdoor', 'complete'].map((s, index) => (
               <View key={s} className="flex-row items-center">
                 <View
-                  className={`w-3 h-3 rounded-full ${
-                    step === s
+                  className={`w-3 h-3 rounded-full ${step === s
                       ? 'bg-lumis-golden'
                       : ['indoor', 'outdoor', 'complete'].indexOf(step) > index
                         ? 'bg-lumis-golden/60'
                         : 'bg-lumis-dusk'
-                  }`}
+                    }`}
                 />
                 {index < 2 && (
                   <View
-                    className={`w-16 h-0.5 ${
-                      ['indoor', 'outdoor', 'complete'].indexOf(step) > index
+                    className={`w-16 h-0.5 ${['indoor', 'outdoor', 'complete'].indexOf(step) > index
                         ? 'bg-lumis-golden/60'
                         : 'bg-lumis-dusk'
-                    }`}
+                      }`}
                   />
                 )}
               </View>

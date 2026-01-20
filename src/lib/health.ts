@@ -12,6 +12,12 @@ import { Platform } from 'react-native';
  * - NSHealthShareUsageDescription permission in Info.plist
  */
 
+import AppleHealthKit, {
+  HealthInputOptions,
+  HealthKitPermissions,
+} from 'react-native-health';
+import { Pedometer } from 'expo-sensors';
+
 export interface HealthSyncData {
   date: string;
   lightMinutes: number;
@@ -19,17 +25,57 @@ export interface HealthSyncData {
   activeEnergy?: number; // kCal
 }
 
+const permissions: HealthKitPermissions = {
+  permissions: {
+    read: [
+      AppleHealthKit.Constants.Permissions.Steps,
+      AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
+    ],
+    write: [
+      AppleHealthKit.Constants.Permissions.Steps,
+    ],
+  },
+};
+
 class HealthService {
-  private isAvailable = false; // Will be true when expo-health is installed
+  private isAvailable = Platform.OS === 'ios';
 
   async requestPermissions(): Promise<boolean> {
     if (!this.isAvailable) {
-      console.log(
-        'HealthKit integration not available. To enable, install expo-health package.'
-      );
       return false;
     }
-    return true;
+
+    // Try HealthKit first
+    console.log('[HealthKit] Initializing...');
+    let healthKitResult = false;
+    try {
+      healthKitResult = await new Promise<boolean>((resolve) => {
+        AppleHealthKit.initHealthKit(permissions, (error) => {
+          if (error) {
+            console.log('[HealthKit] Error initializing:', error);
+            resolve(false);
+            return;
+          }
+          resolve(true); // If entitlement is missing, this might actually succeed but result in no data, OR fail.
+        });
+      });
+    } catch (e) {
+      console.log('[HealthKit] Exception during init:', e);
+    }
+    console.log('[HealthKit] Init result:', healthKitResult);
+
+    // ALWAYS Request Pedometer permissions as fallback/supplement
+    // This is critical because HealthKit entitlement is currently removed
+    console.log('[Pedometer] Requesting permissions...');
+    try {
+      const { granted } = await Pedometer.requestPermissionsAsync();
+      console.log('[Pedometer] Permission granted:', granted);
+      // We consider it a success if Pedometer works, even if HealthKit failed
+      return granted || healthKitResult;
+    } catch (e) {
+      console.log('[Pedometer] Error requesting permissions:', e);
+      return healthKitResult;
+    }
   }
 
   async writeOutdoorActivity(data: HealthSyncData): Promise<boolean> {
@@ -53,28 +99,28 @@ class HealthService {
 
   async readOutdoorActivityMinutes(startDate: Date, endDate: Date): Promise<number> {
     if (!this.isAvailable) return 0;
-
-    try {
-      // Real implementation would query HealthKit
-      console.log(`Reading outdoor activities from ${startDate} to ${endDate}`);
-      return 0;
-    } catch (error) {
-      console.error('Error reading from HealthKit:', error);
-      return 0;
-    }
+    // Note: Outdoor activity minutes are usually inferred from distance or active energy
+    // For now, we return 0 or implement a more complex query if needed
+    return 0;
   }
 
   async syncSteps(startDate: Date, endDate: Date): Promise<number> {
     if (!this.isAvailable) return 0;
 
-    try {
-      // Real implementation would query HealthKit for step count
-      console.log(`Reading steps from ${startDate} to ${endDate}`);
-      return 0;
-    } catch (error) {
-      console.error('Error reading steps from HealthKit:', error);
-      return 0;
-    }
+    const options: HealthInputOptions = {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+
+    return new Promise((resolve) => {
+      AppleHealthKit.getStepCount(options, (err, results) => {
+        if (err || !results) {
+          resolve(0);
+          return;
+        }
+        resolve(results.value);
+      });
+    });
   }
 
   async openHealthApp(): Promise<void> {

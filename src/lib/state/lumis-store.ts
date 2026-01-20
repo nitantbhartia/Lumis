@@ -94,6 +94,15 @@ interface LumisState {
   isPremium: boolean;
   setIsPremium: (value: boolean) => void;
 
+  // Trial (No Credit Card)
+  trialStartedAt: string | null;
+  startTrial: () => void;
+  isTrialActive: () => boolean;
+
+  // Weather Adaptive Goals
+  weatherAdaptiveGoalsEnabled: boolean;
+  setWeatherAdaptiveGoalsEnabled: (value: boolean) => void;
+
   // Stats for achievements
   totalHoursInSunlight: number;
   earlyBirdDaysCount: number;
@@ -403,6 +412,24 @@ export const useLumisStore = create<LumisState>()(
       isPremium: false,
       setIsPremium: (value) => set({ isPremium: value }),
 
+      // Trial (No Credit Card)
+      trialStartedAt: null,
+      startTrial: () => set({ trialStartedAt: new Date().toISOString() }),
+      isTrialActive: () => {
+        const state = get();
+        if (state.isPremium) return true;
+        if (!state.trialStartedAt) return false;
+
+        const trialDate = new Date(state.trialStartedAt);
+        const now = new Date();
+        const diffDays = (now.getTime() - trialDate.getTime()) / (1000 * 3600 * 24);
+        return diffDays <= 7;
+      },
+
+      // Weather Adaptive Goals
+      weatherAdaptiveGoalsEnabled: false,
+      setWeatherAdaptiveGoalsEnabled: (value) => set({ weatherAdaptiveGoalsEnabled: value }),
+
       // Achievement stats
       totalHoursInSunlight: 0,
       earlyBirdDaysCount: 0,
@@ -428,6 +455,8 @@ export const useLumisStore = create<LumisState>()(
         achievements: state.achievements,
         notificationPreferences: state.notificationPreferences,
         isPremium: state.isPremium,
+        trialStartedAt: state.trialStartedAt,
+        weatherAdaptiveGoalsEnabled: state.weatherAdaptiveGoalsEnabled,
         totalHoursInSunlight: state.totalHoursInSunlight,
         earlyBirdDaysCount: state.earlyBirdDaysCount,
         overachieverDaysCount: state.overachieverDaysCount,

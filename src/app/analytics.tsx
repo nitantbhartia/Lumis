@@ -5,8 +5,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { X, Sun, Flame, Calendar, TrendingUp, Award } from 'lucide-react-native';
+import { X, Sun, Flame, Calendar, TrendingUp, Award, Trophy } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
+import { GlassCard } from '@/components/GlassCard';
+import { StatCard } from '@/components/StatCard';
 
 const { width } = Dimensions.get('window');
 
@@ -46,22 +48,24 @@ export default function AnalyticsScreen() {
   return (
     <View className="flex-1 bg-lumis-night">
       <LinearGradient colors={['#1A1A2E', '#16213E', '#0F3460']} style={{ flex: 1 }}>
-        {/* Header */}
         <View
-          className="flex-row items-center justify-between px-6 pb-4 border-b border-lumis-dusk/30"
-          style={{ paddingTop: insets.top + 16 }}
+          className="flex-row items-center justify-between px-6 pb-6"
+          style={{ paddingTop: insets.top + 20 }}
         >
-          <Text
-            className="text-2xl text-lumis-dawn"
-            style={{ fontFamily: 'Outfit_700Bold' }}
-          >
-            Analytics
-          </Text>
+          <View>
+            <Text
+              className="text-4xl text-lumis-dawn"
+              style={{ fontFamily: 'Syne_800ExtraBold' }}
+            >
+              ANALYTICS
+            </Text>
+            <View className="h-1 w-12 bg-lumis-accent rounded-full mt-1" />
+          </View>
           <Pressable
             onPress={handleClose}
-            className="w-10 h-10 rounded-full bg-lumis-twilight/50 items-center justify-center"
+            className="w-12 h-12 rounded-2xl bg-white/5 items-center justify-center border border-white/10"
           >
-            <X size={20} color="#FFB347" strokeWidth={2} />
+            <X size={22} color="#FFF8E7" />
           </Pressable>
         </View>
 
@@ -73,68 +77,39 @@ export default function AnalyticsScreen() {
           {/* Summary Stats */}
           <Animated.View
             entering={FadeInDown.delay(100).duration(400)}
-            className="flex-row space-x-4 mb-6"
+            className="flex-row gap-3 mb-6"
           >
             {/* Current Streak */}
-            <View className="flex-1 bg-lumis-twilight/40 rounded-2xl p-4 border border-lumis-golden/30">
-              <View className="flex-row items-center mb-2">
-                <Flame size={18} color="#FF6B35" strokeWidth={1.5} />
-                <Text
-                  className="text-lumis-sunrise/60 ml-2 text-sm"
-                  style={{ fontFamily: 'Outfit_400Regular' }}
-                >
-                  Current
-                </Text>
-              </View>
-              <Text
-                className="text-3xl text-lumis-golden"
-                style={{ fontFamily: 'Outfit_700Bold' }}
-              >
-                {currentStreak}
-              </Text>
-              <Text
-                className="text-lumis-sunrise/50 text-sm"
-                style={{ fontFamily: 'Outfit_400Regular' }}
-              >
-                day streak
-              </Text>
-            </View>
+            <StatCard
+              icon={Flame}
+              iconColor="#FF6B35"
+              iconBgColor="rgba(255, 107, 53, 0.15)"
+              label="Streak"
+              value={currentStreak}
+              subtitle="DAYS"
+              variant="primary"
+            />
 
-            {/* Longest Streak */}
-            <View className="flex-1 bg-lumis-twilight/40 rounded-2xl p-4 border border-lumis-dusk/30">
-              <View className="flex-row items-center mb-2">
-                <Award size={18} color="#FFB347" strokeWidth={1.5} />
-                <Text
-                  className="text-lumis-sunrise/60 ml-2 text-sm"
-                  style={{ fontFamily: 'Outfit_400Regular' }}
-                >
-                  Best
-                </Text>
-              </View>
-              <Text
-                className="text-3xl text-lumis-dawn"
-                style={{ fontFamily: 'Outfit_700Bold' }}
-              >
-                {longestStreak}
-              </Text>
-              <Text
-                className="text-lumis-sunrise/50 text-sm"
-                style={{ fontFamily: 'Outfit_400Regular' }}
-              >
-                day streak
-              </Text>
-            </View>
+            <StatCard
+              icon={Trophy}
+              iconColor="#FFB347"
+              iconBgColor="rgba(255, 179, 71, 0.15)"
+              label="Best"
+              value={longestStreak}
+              subtitle="DAYS"
+              variant="secondary"
+            />
           </Animated.View>
 
           {/* Weekly Chart */}
           <Animated.View entering={FadeInDown.delay(200).duration(400)} className="mb-6">
             <Text
-              className="text-lumis-sunrise/60 text-sm uppercase mb-3"
-              style={{ fontFamily: 'Outfit_500Medium' }}
+              className="text-lumis-sunrise/40 text-[10px] uppercase tracking-[3px] mb-md px-1"
+              style={{ fontFamily: 'Outfit_700Bold' }}
             >
-              This Week
+              THIS WEEK
             </Text>
-            <View className="bg-lumis-twilight/40 rounded-2xl p-5 border border-lumis-dusk/30">
+            <GlassCard variant="elevated">
               {/* Chart */}
               <View className="flex-row items-end justify-between h-40 mb-4">
                 {last7Days.map((day, index) => {
@@ -207,83 +182,73 @@ export default function AnalyticsScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </GlassCard>
           </Animated.View>
 
           {/* Lifetime Stats */}
-          <Animated.View entering={FadeInDown.delay(300).duration(400)} className="mb-6">
+          <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-lg">
             <Text
-              className="text-lumis-sunrise/60 text-sm uppercase mb-3"
-              style={{ fontFamily: 'Outfit_500Medium' }}
+              className="text-lumis-sunrise/40 text-[10px] uppercase tracking-[3px] mb-md px-1"
+              style={{ fontFamily: 'Outfit_700Bold' }}
             >
-              Lifetime
+              ALL TIME
             </Text>
-            <View className="bg-lumis-twilight/40 rounded-2xl p-5 border border-lumis-dusk/30">
-              <View className="flex-row items-center mb-4">
-                <View className="w-12 h-12 rounded-xl bg-lumis-golden/20 items-center justify-center mr-4">
-                  <Calendar size={24} color="#FFB347" strokeWidth={1.5} />
+            <GlassCard variant="default">
+              <View className="flex-row items-center mb-lg">
+                <View className="w-12 h-12 rounded-2xl bg-lumis-golden/10 items-center justify-center mr-4">
+                  <Calendar size={24} color="#FFB347" />
                 </View>
                 <View className="flex-1">
+                  <Text className="text-lumis-sunrise/40 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_700Bold' }}>Earned Days</Text>
                   <Text
-                    className="text-lumis-dawn text-2xl"
-                    style={{ fontFamily: 'Outfit_700Bold' }}
+                    className="text-3xl text-lumis-dawn"
+                    style={{ fontFamily: 'Syne_700Bold' }}
                   >
                     {totalDaysCompleted}
-                  </Text>
-                  <Text
-                    className="text-lumis-sunrise/50"
-                    style={{ fontFamily: 'Outfit_400Regular' }}
-                  >
-                    days of sunlight earned
                   </Text>
                 </View>
               </View>
 
               <View className="flex-row items-center">
-                <View className="w-12 h-12 rounded-xl bg-lumis-golden/20 items-center justify-center mr-4">
-                  <Sun size={24} color="#FFB347" strokeWidth={1.5} />
+                <View className="w-12 h-12 rounded-2xl bg-lumis-accent/10 items-center justify-center mr-4">
+                  <Sun size={24} color="#8B5CF6" />
                 </View>
                 <View className="flex-1">
+                  <Text className="text-lumis-sunrise/40 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_700Bold' }}>Sun Absorbed</Text>
                   <Text
-                    className="text-lumis-dawn text-2xl"
-                    style={{ fontFamily: 'Outfit_700Bold' }}
+                    className="text-3xl text-lumis-dawn"
+                    style={{ fontFamily: 'Syne_700Bold' }}
                   >
-                    {(progressHistory.reduce((sum, p) => sum + p.lightMinutes, 0)).toFixed(0)}
-                  </Text>
-                  <Text
-                    className="text-lumis-sunrise/50"
-                    style={{ fontFamily: 'Outfit_400Regular' }}
-                  >
-                    total minutes of light
+                    {(progressHistory.reduce((sum, p) => sum + p.lightMinutes, 0)).toFixed(0)} min
                   </Text>
                 </View>
               </View>
-            </View>
+            </GlassCard>
           </Animated.View>
 
           {/* Insight */}
-          <Animated.View entering={FadeInDown.delay(400).duration(400)}>
-            <View className="bg-lumis-golden/10 rounded-2xl p-5 border border-lumis-golden/30">
-              <View className="flex-row items-center mb-2">
-                <TrendingUp size={18} color="#FFB347" strokeWidth={1.5} />
+          <Animated.View entering={FadeInDown.delay(400).springify()}>
+            <GlassCard variant="hero" glow glowColor="#8B5CF6">
+              <View className="flex-row items-center mb-3">
+                <TrendingUp size={20} color="#8B5CF6" />
                 <Text
-                  className="text-lumis-golden ml-2"
-                  style={{ fontFamily: 'Outfit_600SemiBold' }}
+                  className="text-lumis-dawn text-base ml-2"
+                  style={{ fontFamily: 'Outfit_700Bold' }}
                 >
-                  Insight
+                  Your Edge
                 </Text>
               </View>
               <Text
-                className="text-lumis-sunrise/80"
+                className="text-lumis-sunrise/70 text-base leading-relaxed"
                 style={{ fontFamily: 'Outfit_400Regular' }}
               >
                 {currentStreak >= 7
-                  ? "Amazing! You've maintained a week-long streak. Your circadian rhythm is thanking you!"
+                  ? "Peak alignment. Your sleep quality is likely at its best right now."
                   : currentStreak >= 3
-                    ? "Great progress! Keep going to build a stronger habit."
-                    : "Start your streak today! Morning light exposure improves sleep quality and mood."}
+                    ? "Momentum building. One more sunrise cements this habit."
+                    : "The first 3 days are the reset. Push through — the energy shift is coming."}
               </Text>
-            </View>
+            </GlassCard>
           </Animated.View>
         </ScrollView>
       </LinearGradient>

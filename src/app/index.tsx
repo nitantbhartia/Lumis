@@ -49,18 +49,10 @@ export default function IndexScreen() {
     }
 
     // Not authenticated - start the new passwordless flow
-    // Go to splash screen
+    // Go to splash screen immediately
     const timer = setTimeout(() => {
       router.replace('/onboarding-splash');
-    }, 2000);
-
-    // Animate entry for landing page while it's visible
-    titleOpacity.value = withDelay(500, withTiming(1, { duration: 800 }));
-    titleTranslateY.value = withDelay(500, withTiming(0, { duration: 800, easing: Easing.out(Easing.back(1.5)) }));
-    subtitleOpacity.value = withDelay(900, withTiming(1, { duration: 800 }));
-    buttonOpacity.value = withDelay(1300, withTiming(1, { duration: 600 }));
-    buttonScale.value = withDelay(1300, withSpring(1, { damping: 12 }));
-    secondaryButtonOpacity.value = withDelay(1500, withTiming(1, { duration: 600 }));
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [isAuthenticated, hasCompletedOnboarding]);

@@ -30,6 +30,22 @@ export default function OnboardingSuccessScreen() {
   const textOpacity = useSharedValue(0);
   const buttonOpacity = useSharedValue(0);
 
+  const isPremium = useLumisStore((s) => s.isPremium);
+  const isTrialActive = useLumisStore((s) => s.isTrialActive());
+  const hasPremiumAccess = isPremium || isTrialActive;
+
+  const handleContinue = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setHasCompletedOnboarding(true);
+
+    // Redirect to Paywall Walkthrough if not premium (Post-Onboarding Sunk Cost)
+    if (!hasPremiumAccess) {
+      router.replace('/premium-walkthrough');
+    } else {
+      router.replace('/dashboard');
+    }
+  };
+
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -54,35 +70,15 @@ export default function OnboardingSuccessScreen() {
     // Auto-navigate after 3 seconds
     const timer = setTimeout(() => {
       setHasCompletedOnboarding(true);
-      router.replace('/dashboard');
-    }, 3500);
+      if (!hasPremiumAccess) {
+        router.replace('/premium-walkthrough');
+      } else {
+        router.replace('/dashboard');
+      }
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, []);
-
-  const sunStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sunScale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
-
-  const buttonStyle = useAnimatedStyle(() => ({
-    opacity: buttonOpacity.value,
-  }));
-
-  const displayName = user?.name || userName || 'Friend';
-
-  const handleContinue = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setHasCompletedOnboarding(true);
-    router.replace('/dashboard');
-  };
 
   return (
     <View className="flex-1">
@@ -136,13 +132,13 @@ export default function OnboardingSuccessScreen() {
                 className="text-4xl text-lumis-dawn text-center"
                 style={{ fontFamily: 'Outfit_700Bold' }}
               >
-                Account Secured
+                You're All Set
               </Text>
               <Text
                 className="text-xl text-lumis-sunrise text-center"
                 style={{ fontFamily: 'Outfit_400Regular' }}
               >
-                You're ready for{'\n'}tomorrow's sunrise, {displayName}
+                Tomorrow starts with{'\n'}golden light, {displayName}
               </Text>
             </Animated.View>
           </View>
@@ -168,7 +164,7 @@ export default function OnboardingSuccessScreen() {
                   className="text-lumis-night text-center text-lg"
                   style={{ fontFamily: 'Outfit_600SemiBold' }}
                 >
-                  Go to Dashboard
+                  See Your Sun
                 </Text>
               </LinearGradient>
             </Pressable>

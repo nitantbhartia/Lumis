@@ -16,10 +16,17 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Lumis uses your location to track outdoor time and provide weather updates.",
         "NSCameraUsageDescription": "Lumis uses the camera sensor to accurately measure ambient light levels and optimize your light intake.",
         "NSMicrophoneUsageDescription": "Lumis uses the microphone for enhanced interaction features.",
-        "NSFaceIDUsageDescription": "Lumis uses FaceID to secure your app lock settings."
+        "NSFaceIDUsageDescription": "Lumis uses FaceID to secure your app lock settings.",
+        "NSHealthShareUsageDescription": "Lumis reads your outdoor activity and steps from HealthKit to track your daily progress automatically.",
+        "NSHealthUpdateUsageDescription": "Lumis can sync your outdoor light exposure activities back to the Health app.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
-        "com.apple.developer.family-controls": true
+        "com.apple.developer.family-controls": true,
+        "com.apple.developer.applesignin": [
+          "Default"
+        ],
+        "aps-environment": "development"
       }
     },
     "android": {
@@ -32,10 +39,21 @@
     },
     "plugins": [
       "expo-router",
-      "./plugins/withManagedSettings"
+      "expo-dev-client",
+      "./plugins/withManagedSettings",
+      "expo-asset",
+      "expo-video",
+      "expo-web-browser",
+      "react-native-edge-to-edge"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "634ee6a2-a98a-4c50-8a28-8520f9b3e715"
+      }
     }
   }
 }

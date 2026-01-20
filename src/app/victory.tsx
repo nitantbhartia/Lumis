@@ -197,14 +197,14 @@ export default function VictoryScreen() {
                 className="text-5xl text-lumis-dawn text-center mb-4"
                 style={{ fontFamily: 'Outfit_700Bold' }}
               >
-                Sun Drenched!
+                EARNED
               </Text>
               <Text
                 className="text-lg text-lumis-sunrise/70 text-center mb-8"
                 style={{ fontFamily: 'Outfit_400Regular' }}
               >
-                You earned {todayProgress.lightMinutes.toFixed(1)} minutes of light.{'\n'}
-                Your apps are now unlocked!
+                {todayProgress.lightMinutes.toFixed(0)} min of pure sun.{'\n'}
+                Apps unlocked. You did the hard thing.
               </Text>
             </Animated.View>
 
@@ -295,7 +295,7 @@ export default function VictoryScreen() {
                   className="text-lumis-night text-lg"
                   style={{ fontFamily: 'Outfit_600SemiBold' }}
                 >
-                  Continue to Dashboard
+                  Claim Your Day
                 </Text>
               </LinearGradient>
             </Pressable>

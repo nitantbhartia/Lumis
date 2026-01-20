@@ -25,6 +25,7 @@ import {
   Shield,
 } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
+import { GlassCard } from '@/components/GlassCard';
 
 const iconMap: Record<string, React.ReactNode> = {
   instagram: <Instagram size={28} color="#FFF8E7" strokeWidth={1.5} />,
@@ -46,17 +47,30 @@ export default function AppSelectionScreen() {
 
   const buttonScale = useSharedValue(1);
 
+  const isPremium = useLumisStore((s) => s.isPremium);
+  const isTrialActive = useLumisStore((s) => s.isTrialActive());
+  const hasPremiumAccess = isPremium || isTrialActive;
+
   const selectedCount = blockedApps.filter((app) => app.isBlocked).length;
 
   const handleToggle = (appId: string) => {
+    const app = blockedApps.find((a) => a.id === appId);
+
+    // Check limit for free users (allow unblocking, but block adding 4th)
+    if (!hasPremiumAccess && selectedCount >= 3 && app && !app.isBlocked) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      router.push('/premium');
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleAppBlocked(appId);
   };
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setHasCompletedOnboarding(true);
-    router.replace('/dashboard');
+    // Don't set onboarding complete yet, now moving to Auth -> Permissions
+    router.push('/onboarding-auth');
   };
 
   const buttonAnimStyle = useAnimatedStyle(() => ({
@@ -88,19 +102,21 @@ export default function AppSelectionScreen() {
 
           {/* Selection counter */}
           <View className="px-8 mb-4">
-            <View className="bg-lumis-twilight/50 rounded-xl px-4 py-3 flex-row items-center">
-              <View className="w-8 h-8 rounded-full bg-lumis-golden/20 items-center justify-center mr-3">
-                <Text className="text-lumis-golden" style={{ fontFamily: 'Outfit_600SemiBold' }}>
-                  {selectedCount}
+            <GlassCard variant="flat">
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-2xl bg-lumis-golden/20 items-center justify-center mr-3">
+                  <Text className="text-lumis-golden text-lg" style={{ fontFamily: 'Outfit_700Bold' }}>
+                    {selectedCount}
+                  </Text>
+                </View>
+                <Text
+                  className="text-lumis-sunrise text-base"
+                  style={{ fontFamily: 'Outfit_500Medium' }}
+                >
+                  {selectedCount === 1 ? 'app' : 'apps'} will be shielded each morning
                 </Text>
               </View>
-              <Text
-                className="text-lumis-sunrise/80"
-                style={{ fontFamily: 'Outfit_400Regular' }}
-              >
-                {selectedCount === 1 ? 'app' : 'apps'} will be shielded each morning
-              </Text>
-            </View>
+            </GlassCard>
           </View>
 
           {/* App list */}
@@ -114,29 +130,18 @@ export default function AppSelectionScreen() {
                 key={app.id}
                 entering={FadeInDown.delay(index * 50).duration(400)}
                 layout={Layout.springify()}
+                className="mb-3"
               >
-                <Pressable
+                <GlassCard
+                  variant={app.isBlocked ? 'elevated' : 'default'}
                   onPress={() => handleToggle(app.id)}
-                  className="mb-3"
+                  glow={app.isBlocked}
                 >
-                  <View
-                    className={`flex-row items-center p-4 rounded-2xl border-2 ${
-                      app.isBlocked
-                        ? 'border-lumis-golden bg-lumis-golden/10'
-                        : 'border-lumis-dusk/50 bg-lumis-twilight/30'
-                    }`}
-                    style={{
-                      shadowColor: app.isBlocked ? '#FFB347' : 'transparent',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 8,
-                    }}
-                  >
+                  <View className="flex-row items-center">
                     {/* App icon */}
                     <View
-                      className={`w-14 h-14 rounded-xl items-center justify-center mr-4 ${
-                        app.isBlocked ? 'bg-lumis-golden/20' : 'bg-lumis-dusk/50'
-                      }`}
+                      className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 ${app.isBlocked ? 'bg-lumis-golden/20' : 'bg-lumis-dusk/40'
+                        }`}
                     >
                       {iconMap[app.icon]}
                     </View>
@@ -150,7 +155,8 @@ export default function AppSelectionScreen() {
                         {app.name}
                       </Text>
                       <Text
-                        className="text-lumis-sunrise/50 text-sm"
+                        className={`text-sm ${app.isBlocked ? 'text-lumis-golden/80' : 'text-lumis-sunrise/50'
+                          }`}
                         style={{ fontFamily: 'Outfit_400Regular' }}
                       >
                         {app.isBlocked ? 'Will be shielded' : 'Tap to shield'}
@@ -159,14 +165,13 @@ export default function AppSelectionScreen() {
 
                     {/* Checkbox */}
                     <View
-                      className={`w-7 h-7 rounded-full items-center justify-center ${
-                        app.isBlocked ? 'bg-lumis-golden' : 'border-2 border-lumis-dusk'
-                      }`}
+                      className={`w-8 h-8 rounded-full items-center justify-center ${app.isBlocked ? 'bg-lumis-golden' : 'border-2 border-lumis-dusk/50'
+                        }`}
                     >
-                      {app.isBlocked && <Check size={16} color="#1A1A2E" strokeWidth={3} />}
+                      {app.isBlocked && <Check size={18} color="#1A1A2E" strokeWidth={3} />}
                     </View>
                   </View>
-                </Pressable>
+                </GlassCard>
               </Animated.View>
             ))}
           </ScrollView>

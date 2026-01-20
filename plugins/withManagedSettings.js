@@ -27,7 +27,7 @@ const withManagedSettings = (config) => {
         return config;
     });
 
-    // 2. Add Family Controls entitlement
+    // 2. Add Entitlements
     config = withEntitlementsPlist(config, (config) => {
         config.modResults['com.apple.developer.family-controls'] = true;
         return config;
