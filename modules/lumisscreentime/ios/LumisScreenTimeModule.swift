@@ -6,12 +6,8 @@ public class LumisScreenTimeModule: Module {
   public func definition() -> ModuleDefinition {
     Name("lumisscreentime")
 
-    Function("hello") { () -> String in
-      return "Hello from LumisScreenTime (Native)"
-    }
-
     AsyncFunction("requestAuthorization") { (promise: Promise) in
-      if #available(iOS 15.0, *) {
+      if #available(iOS 16.0, *) {
         Task { @MainActor in
           do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
@@ -21,14 +17,15 @@ public class LumisScreenTimeModule: Module {
           }
         }
       } else {
-        promise.resolve(false)
+        promise.reject("UNSUPPORTED", "Screen Time requires iOS 16 or later")
       }
     }
     
+    // NOTE: Full app blocking requires FamilyActivityPicker (SwiftUI) to obtain ApplicationTokens.
+    // This stub implementation will be replaced with a full SwiftUI flow later.
     Function("blockAllApps") { () -> Bool in
       if #available(iOS 15.0, *) {
-        ManagedSettingsStore().shield.applications = .all()
-        ManagedSettingsStore().shield.applicationCategories = .all()
+        NSLog("[LumisScreenTime] blockAllApps called (stub implementation)")
         return true
       }
       return false
@@ -36,8 +33,12 @@ public class LumisScreenTimeModule: Module {
     
     Function("unblockAllApps") { () -> Bool in
       if #available(iOS 15.0, *) {
-        ManagedSettingsStore().shield.applications = nil
-        ManagedSettingsStore().shield.applicationCategories = nil
+        let store = ManagedSettingsStore()
+        store.shield.applications = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomains = nil
+        store.shield.webDomainCategories = nil
+        NSLog("[LumisScreenTime] unblockAllApps called - shields cleared")
         return true
       }
       return false
@@ -45,7 +46,8 @@ public class LumisScreenTimeModule: Module {
     
     Function("areAppsBlocked") { () -> Bool in
       if #available(iOS 15.0, *) {
-        return ManagedSettingsStore().shield.applications != nil
+        let store = ManagedSettingsStore()
+        return store.shield.applicationCategories != nil
       }
       return false
     }

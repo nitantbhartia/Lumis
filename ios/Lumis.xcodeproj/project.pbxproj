@@ -9,30 +9,30 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		597154EF9C16A0363F1BF139 /* libPods-Lumis.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 52AA611B7184CD074C69415B /* libPods-Lumis.a */; };
-		A1D7BF8615A8456DAB5B6D3A /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E011F1176FF4509BA390918 /* DeviceActivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
-		AAAA0A796F7388E6F5E4F22B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 91B1B20AD3F63B740E2A7B6D /* PrivacyInfo.xcprivacy */; };
-		B254895DB6ED48FCB7FC9812 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08CC70A2FA664D03928C897B /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		429A238939FFFAF50E73C984 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D97CF3D1B81EBF14DD5C7B4E /* ExpoModulesProvider.swift */; };
+		67C4CB163B2342A09A8907C6 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B15E82549CD74F04BD137539 /* DeviceActivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		77A9AB384511D67A6FCECBDB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = EB17D468FA88FA5C11C8660C /* PrivacyInfo.xcprivacy */; };
+		91B1E38234C647D89CA67375 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D95B93212B74137BA0139FD /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		92C61F6CDE11C216361CE294 /* libPods-Lumis.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 979B9E512843FCDD6945C829 /* libPods-Lumis.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		BEFBF04D9917A7B256D05554 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7212EAF284F98A9DF03C39A5 /* ExpoModulesProvider.swift */; };
+		DF88E020E10E428CA455BEB5 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2DB80453133B4E48BEA18DBC /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		F1C903992D0B41C99307A7AB /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A0203998C0AC42E38D4CF9C5 /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		08CC70A2FA664D03928C897B /* FamilyControls.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		13B07F961A680F5B00A75B9A /* Lumis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lumis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Lumis/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Lumis/Info.plist; sourceTree = "<group>"; };
-		52AA611B7184CD074C69415B /* libPods-Lumis.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Lumis.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		7212EAF284F98A9DF03C39A5 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Lumis/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		7E011F1176FF4509BA390918 /* DeviceActivity.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		91B1B20AD3F63B740E2A7B6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Lumis/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		A0203998C0AC42E38D4CF9C5 /* ManagedSettings.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		1D95B93212B74137BA0139FD /* ManagedSettings.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		2DB80453133B4E48BEA18DBC /* FamilyControls.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		614021E6CD01C51F3F6BE4A7 /* Pods-Lumis.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Lumis.release.xcconfig"; path = "Target Support Files/Pods-Lumis/Pods-Lumis.release.xcconfig"; sourceTree = "<group>"; };
+		979B9E512843FCDD6945C829 /* libPods-Lumis.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Lumis.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Lumis/SplashScreen.storyboard; sourceTree = "<group>"; };
+		B15E82549CD74F04BD137539 /* DeviceActivity.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		D524E9942807756C834067E7 /* Pods-Lumis.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Lumis.release.xcconfig"; path = "Target Support Files/Pods-Lumis/Pods-Lumis.release.xcconfig"; sourceTree = "<group>"; };
-		E5239FF787286FEE12CF6038 /* Pods-Lumis.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Lumis.debug.xcconfig"; path = "Target Support Files/Pods-Lumis/Pods-Lumis.debug.xcconfig"; sourceTree = "<group>"; };
+		BFCC72C39C12B7F74621EA65 /* Pods-Lumis.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Lumis.debug.xcconfig"; path = "Target Support Files/Pods-Lumis/Pods-Lumis.debug.xcconfig"; sourceTree = "<group>"; };
+		D97CF3D1B81EBF14DD5C7B4E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Lumis/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		EB17D468FA88FA5C11C8660C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Lumis/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Lumis/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Lumis-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Lumis-Bridging-Header.h"; path = "Lumis/Lumis-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -43,10 +43,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F1C903992D0B41C99307A7AB /* ManagedSettings.framework in Frameworks */,
-				B254895DB6ED48FCB7FC9812 /* FamilyControls.framework in Frameworks */,
-				A1D7BF8615A8456DAB5B6D3A /* DeviceActivity.framework in Frameworks */,
-				597154EF9C16A0363F1BF139 /* libPods-Lumis.a in Frameworks */,
+				91B1E38234C647D89CA67375 /* ManagedSettings.framework in Frameworks */,
+				DF88E020E10E428CA455BEB5 /* FamilyControls.framework in Frameworks */,
+				67C4CB163B2342A09A8907C6 /* DeviceActivity.framework in Frameworks */,
+				92C61F6CDE11C216361CE294 /* libPods-Lumis.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,7 +62,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				91B1B20AD3F63B740E2A7B6D /* PrivacyInfo.xcprivacy */,
+				EB17D468FA88FA5C11C8660C /* PrivacyInfo.xcprivacy */,
 			);
 			name = Lumis;
 			sourceTree = "<group>";
@@ -71,20 +71,30 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				A0203998C0AC42E38D4CF9C5 /* ManagedSettings.framework */,
-				08CC70A2FA664D03928C897B /* FamilyControls.framework */,
-				7E011F1176FF4509BA390918 /* DeviceActivity.framework */,
-				52AA611B7184CD074C69415B /* libPods-Lumis.a */,
+				1D95B93212B74137BA0139FD /* ManagedSettings.framework */,
+				2DB80453133B4E48BEA18DBC /* FamilyControls.framework */,
+				B15E82549CD74F04BD137539 /* DeviceActivity.framework */,
+				979B9E512843FCDD6945C829 /* libPods-Lumis.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		75E3B0E8D150FE953C40C231 /* Lumis */ = {
+		544069B687ED405D3812805F /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				7212EAF284F98A9DF03C39A5 /* ExpoModulesProvider.swift */,
+				EF8C8CEB5A1D6145D664F79D /* Lumis */,
 			);
-			name = Lumis;
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+		6BF7FA6AAE95413E52FA555D /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				BFCC72C39C12B7F74621EA65 /* Pods-Lumis.debug.xcconfig */,
+				614021E6CD01C51F3F6BE4A7 /* Pods-Lumis.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -101,8 +111,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				85DC7CECDC2AFB4A38D091EE /* Pods */,
-				DEB5A5F93314FD0EF2C2F3D3 /* ExpoModulesProviders */,
+				6BF7FA6AAE95413E52FA555D /* Pods */,
+				544069B687ED405D3812805F /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -117,16 +127,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		85DC7CECDC2AFB4A38D091EE /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				E5239FF787286FEE12CF6038 /* Pods-Lumis.debug.xcconfig */,
-				D524E9942807756C834067E7 /* Pods-Lumis.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -136,12 +136,12 @@
 			path = Lumis/Supporting;
 			sourceTree = "<group>";
 		};
-		DEB5A5F93314FD0EF2C2F3D3 /* ExpoModulesProviders */ = {
+		EF8C8CEB5A1D6145D664F79D /* Lumis */ = {
 			isa = PBXGroup;
 			children = (
-				75E3B0E8D150FE953C40C231 /* Lumis */,
+				D97CF3D1B81EBF14DD5C7B4E /* ExpoModulesProvider.swift */,
 			);
-			name = ExpoModulesProviders;
+			name = Lumis;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -152,13 +152,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Lumis" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				6858879F05856DD1EDD9260D /* [Expo] Configure project */,
+				28B0CF2819835D6D62B72607 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				E4FB913E2B46E26085C66335 /* [CP] Embed Pods Frameworks */,
+				DBA7AF365E000753D25D7B8A /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -178,8 +178,8 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
+						DevelopmentTeam = 3432PCL99X;
 						LastSwiftMigration = 1250;
-						DevelopmentTeam = "3432PCL99X";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -210,7 +210,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				AAAA0A796F7388E6F5E4F22B /* PrivacyInfo.xcprivacy in Resources */,
+				77A9AB384511D67A6FCECBDB /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -254,7 +254,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		6858879F05856DD1EDD9260D /* [Expo] Configure project */ = {
+		28B0CF2819835D6D62B72607 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -339,7 +339,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Lumis/Pods-Lumis-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		E4FB913E2B46E26085C66335 /* [CP] Embed Pods Frameworks */ = {
+		DBA7AF365E000753D25D7B8A /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -365,7 +365,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				BEFBF04D9917A7B256D05554 /* ExpoModulesProvider.swift in Sources */,
+				429A238939FFFAF50E73C984 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -374,12 +374,15 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E5239FF787286FEE12CF6038 /* Pods-Lumis.debug.xcconfig */;
+			baseConfigurationReference = BFCC72C39C12B7F74621EA65 /* Pods-Lumis.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Lumis/Lumis.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3432PCL99X;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -405,20 +408,20 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
-				DEVELOPMENT_TEAM = "3432PCL99X";
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D524E9942807756C834067E7 /* Pods-Lumis.release.xcconfig */;
+			baseConfigurationReference = 614021E6CD01C51F3F6BE4A7 /* Pods-Lumis.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Lumis/Lumis.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3432PCL99X;
 				INFOPLIST_FILE = Lumis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -438,9 +441,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
-				DEVELOPMENT_TEAM = "3432PCL99X";
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Release;
 		};
