@@ -41,9 +41,9 @@ export default function OnboardingSuccessScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setHasCompletedOnboarding(true);
 
-    // Redirect to Paywall Walkthrough if not premium
+    // Redirect to Paywall if not premium
     if (!hasPremiumAccess) {
-      router.replace('/premium-walkthrough');
+      router.replace('/(tabs)/premium');
     } else {
       router.replace('/(tabs)');
     }

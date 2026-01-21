@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
-import { Home, BarChart3, Shield, Sparkles } from 'lucide-react-native';
+import { Home, BarChart3, Shield, Sparkles, Plus } from 'lucide-react-native';
 
 export default function TabLayout() {
     return (
@@ -46,7 +46,7 @@ export default function TabLayout() {
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <View style={{ alignItems: 'center' }}>
-                            <Shield size={24} color={color} strokeWidth={focused ? 2.5 : 1.5} />
+                            <Plus size={28} color={color} strokeWidth={focused ? 3 : 2} />
                         </View>
                     ),
                 }}
@@ -54,6 +54,7 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="premium"
                 options={{
+                    tabBarStyle: { display: 'none' },
                     tabBarIcon: ({ color, focused }) => (
                         <View style={{ alignItems: 'center' }}>
                             <Sparkles size={24} color={color} strokeWidth={focused ? 2.5 : 1.5} />

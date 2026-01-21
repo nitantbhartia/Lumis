@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // API Configuration
 // Set your API base URL in the ENV tab of Vibecode
@@ -76,22 +77,22 @@ class TokenManager {
   private refreshToken: string | null = null;
 
   async init(): Promise<void> {
-    this.accessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-    this.refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+    this.accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+    this.refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   }
 
   async setTokens(tokens: AuthTokens): Promise<void> {
     this.accessToken = tokens.accessToken;
     this.refreshToken = tokens.refreshToken;
-    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
-    await AsyncStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, tokens.accessToken);
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.refreshToken);
   }
 
   async clearTokens(): Promise<void> {
     this.accessToken = null;
     this.refreshToken = null;
-    await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
-    await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
   }
 
   getAccessToken(): string | null {

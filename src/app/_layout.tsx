@@ -8,6 +8,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Syne_700Bold, Syne_800ExtraBold } from '@expo-google-fonts/syne';
 import { useEffect } from 'react';
+import { initRevenueCat } from '@/lib/revenuecat';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -41,6 +42,13 @@ function RootLayoutNav() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding-splash" />
+        <Stack.Screen name="onboarding-question-sunlight" />
+        <Stack.Screen name="onboarding-question-wakeup" />
+        <Stack.Screen name="onboarding-goal-setup" />
+        <Stack.Screen name="onboarding-permission-location" />
+        <Stack.Screen name="onboarding-permission-motion" />
+        <Stack.Screen name="onboarding-permission-screentime" />
+        <Stack.Screen name="onboarding-permission-notifications" />
         <Stack.Screen name="onboarding-value-prop" />
         <Stack.Screen name="onboarding-calibration" />
         <Stack.Screen name="onboarding-auth" />
@@ -53,14 +61,14 @@ function RootLayoutNav() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="calibration" />
         <Stack.Screen name="app-selection" />
-        <Stack.Screen name="dashboard" />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="compass-lux" />
         <Stack.Screen name="tracking" />
         <Stack.Screen name="victory" options={{ animation: 'fade' }} />
-        <Stack.Screen name="shield" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+        <Stack.Screen name="activity-summary" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
         <Stack.Screen name="analytics" options={{ presentation: 'modal' }} />
         <Stack.Screen name="achievements" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="premium" options={{ presentation: 'modal' }} />
         <Stack.Screen name="leaderboard" options={{ presentation: 'modal' }} />
         <Stack.Screen name="friends" options={{ presentation: 'modal' }} />
         <Stack.Screen name="insights" options={{ presentation: 'modal' }} />
@@ -82,6 +90,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
+      initRevenueCat();
     }
   }, [fontsLoaded]);
 

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, ViewStyle, DimensionValue } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 interface SkeletonLoaderProps {
   variant?: 'card' | 'text' | 'circle' | 'stat';
-  width?: number | string;
+  width?: DimensionValue;
   height?: number;
   className?: string;
   style?: ViewStyle;

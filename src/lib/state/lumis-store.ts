@@ -26,6 +26,28 @@ export interface Calibration {
   isCalibrated: boolean;
 }
 
+export interface ActivityCoordinate {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
+
+export interface ActivitySession {
+  id: string;
+  type: 'walk' | 'run' | 'meditate' | 'sit_soak';
+  startTime: string;
+  durationSeconds: number;
+  lightMinutes: number;
+  steps: number;
+  calories: number;
+  distance: number;
+  lux: number;
+  uvIndex: number;
+  temperature: number;
+  vitaminD: number;
+  coordinates: ActivityCoordinate[];
+}
+
 interface LumisState {
   // Onboarding
   hasCompletedOnboarding: boolean;
@@ -114,9 +136,23 @@ interface LumisState {
   sunlightFrequency: 'daily' | 'few_times' | 'once_a_week' | 'rarely' | null;
   setSunlightFrequency: (value: 'daily' | 'few_times' | 'once_a_week' | 'rarely') => void;
 
+  // Preferences
+  skinType: 1 | 2 | 3 | 4 | 5 | 6; // Fitzpatrick Scale
+  setSkinType: (value: 1 | 2 | 3 | 4 | 5 | 6) => void;
+
   // Daily Activity Selection
   selectedActivity: 'walk' | 'run' | 'meditate' | 'sit_soak' | null;
   setSelectedActivity: (value: 'walk' | 'run' | 'meditate' | 'sit_soak' | null) => void;
+
+  // Emergency Flares (Consumables)
+  emergencyFlares: number;
+  addEmergencyFlares: (count: number) => void;
+  consumeEmergencyFlare: () => void;
+
+  // Activity History
+  activityHistory: ActivitySession[];
+  lastCompletedSession: ActivitySession | null;
+  addActivityToHistory: (session: ActivitySession) => void;
 }
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -449,9 +485,26 @@ export const useLumisStore = create<LumisState>()(
       sunlightFrequency: null,
       setSunlightFrequency: (value) => set({ sunlightFrequency: value }),
 
+      // Preferences
+      skinType: 2,
+      setSkinType: (value) => set({ skinType: value }),
+
       // Daily Activity Selection
       selectedActivity: null,
       setSelectedActivity: (value) => set({ selectedActivity: value }),
+
+      // Activity History
+      activityHistory: [],
+      lastCompletedSession: null,
+      addActivityToHistory: (session) => set((s) => ({
+        activityHistory: [session, ...s.activityHistory].slice(0, 50),
+        lastCompletedSession: session
+      })),
+
+      // Emergency Flares
+      emergencyFlares: 0,
+      addEmergencyFlares: (count) => set((s) => ({ emergencyFlares: s.emergencyFlares + count })),
+      consumeEmergencyFlare: () => set((s) => ({ emergencyFlares: Math.max(0, s.emergencyFlares - 1) })),
     }),
     {
       name: 'lumis-storage',
@@ -478,6 +531,9 @@ export const useLumisStore = create<LumisState>()(
         overachieverDaysCount: state.overachieverDaysCount,
         daysWithoutEmergencyUnlock: state.daysWithoutEmergencyUnlock,
         hasHadStreakBefore: state.hasHadStreakBefore,
+        emergencyFlares: state.emergencyFlares,
+        activityHistory: state.activityHistory,
+        lastCompletedSession: state.lastCompletedSession,
       }),
     }
   )

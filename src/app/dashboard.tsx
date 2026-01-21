@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Dimensions } from 'react
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, Easing, interpolate } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing, interpolate } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import {
   Info,
@@ -18,6 +18,8 @@ import Svg, { Path, Circle, G, Text as SvgText } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
 import CalendarModal from '../components/CalendarModal';
+import EmergencyUnlockModal from '../components/EmergencyUnlockModal';
+import { AlertCircle } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,7 +36,7 @@ const WeatherGraphic = ({ condition }: { condition: string }) => {
 };
 
 // Sun Arc Component with Expandable Weather
-function SunArc({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+const SunArc = React.memo(({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) => {
   const weather = useWeather();
   const rotation = useSharedValue(0);
   const heightValue = useSharedValue(0);
@@ -43,7 +45,9 @@ function SunArc({ expanded, onToggle }: { expanded: boolean; onToggle: () => voi
   useEffect(() => {
     rotation.value = withTiming(expanded ? 180 : 0, { duration: 300 });
     heightValue.value = withTiming(expanded ? 100 : 0, { duration: 300, easing: Easing.inOut(Easing.ease) });
-    opacityValue.value = withTiming(expanded ? 1 : 0, { duration: 200, delay: expanded ? 100 : 0 });
+    opacityValue.value = expanded
+      ? withDelay(100, withTiming(1, { duration: 200 }))
+      : withTiming(0, { duration: 200 });
   }, [expanded]);
 
   const chevronStyle = useAnimatedStyle(() => ({
@@ -124,7 +128,7 @@ function SunArc({ expanded, onToggle }: { expanded: boolean; onToggle: () => voi
       </Animated.View>
     </View>
   );
-}
+});
 
 import UserSettingsModal from '../components/UserSettingsModal';
 
@@ -138,6 +142,7 @@ export default function DashboardScreen() {
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEmergencyUnlock, setShowEmergencyUnlock] = useState(false);
   const [peopleCount, setPeopleCount] = useState(142);
   const [isWeatherExpanded, setIsWeatherExpanded] = useState(false);
 
@@ -152,7 +157,7 @@ export default function DashboardScreen() {
 
   const handleStartTracking = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/compass-lux');
+    router.push('/(tabs)/shield');
   };
 
   const toggleWeather = () => {
@@ -234,6 +239,18 @@ export default function DashboardScreen() {
             <Info size={18} color="rgba(0,0,0,0.3)" />
           </View>
 
+          {/* Emergency Unlock Trigger (Floating Pill) */}
+          <Pressable
+            style={styles.emergencyPill}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setShowEmergencyUnlock(true);
+            }}
+          >
+            <AlertCircle size={14} color="#FF6347" />
+            <Text style={styles.emergencyPillText}>Need to unlock an app?</Text>
+          </Pressable>
+
           {/* Spacer if needed to keep button visible */}
           <View style={{ flex: 1, minHeight: 40 }} />
         </ScrollView>
@@ -269,6 +286,14 @@ export default function DashboardScreen() {
       <CalendarModal
         visible={showCalendar}
         onClose={() => setShowCalendar(false)}
+      />
+
+      <EmergencyUnlockModal
+        visible={showEmergencyUnlock}
+        onClose={() => setShowEmergencyUnlock(false)}
+        onSuccess={() => {
+          console.log('App unlocked via Emergency Flare');
+        }}
       />
     </View>
   );
@@ -503,5 +528,23 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'Outfit_500Medium',
     color: '#1A1A2E',
+  },
+  emergencyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 99, 71, 0.1)',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 24,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 99, 71, 0.2)',
+  },
+  emergencyPillText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#FF6347',
   },
 });

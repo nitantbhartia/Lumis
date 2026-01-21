@@ -13,7 +13,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import { X, Pause, Play, Shield, Sun } from 'lucide-react-native';
+import { Sun, Pause, Play, X, MapPin, Zap } from 'lucide-react-native';
+import { calculateVitaminD, calculateLightQuality } from '@/lib/bio-metrics';
 import Svg, { Circle, Line, Text as SvgText, G, Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { unblockApps } from '@/lib/screen-time';
@@ -112,6 +113,8 @@ export default function TrackingScreen() {
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [location, setLocation] = useState<{ city: string; heading: number; temp: number; weather: string } | null>(null);
+  const [sessionCoordinates, setSessionCoordinates] = useState<{ latitude: number, longitude: number, timestamp: number }[]>([]);
+  const lastCoordRef = useRef<{ latitude: number, longitude: number } | null>(null);
 
   const accumulatedMinutesRef = useRef(todayProgress.lightMinutes);
   const pulseScale = useSharedValue(1);
@@ -149,14 +152,23 @@ export default function TrackingScreen() {
       try {
         const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
         if (locStatus === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({});
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           const heading = await Location.getHeadingAsync();
+
           setLocation({
             city: 'SAN DIEGO, CA',
             heading: heading.trueHeading || heading.magHeading || 0,
             temp: 15.0,
             weather: 'MOSTLY CLOUDY',
           });
+
+          // Initial coordinate
+          setSessionCoordinates([{
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            timestamp: Date.now()
+          }]);
+          lastCoordRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         }
       } catch (e) {
         console.log('[Tracking] Location error:', e);
@@ -172,8 +184,22 @@ export default function TrackingScreen() {
   useEffect(() => {
     if (isPaused || isGoalReached) return;
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       setSessionSeconds((prev) => prev + 1);
+
+      // Record coordinate every 10 seconds
+      if (sessionSeconds % 10 === 0) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setSessionCoordinates(prev => [
+            ...prev,
+            { latitude: loc.coords.latitude, longitude: loc.coords.longitude, timestamp: Date.now() }
+          ]);
+          lastCoordRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        } catch (e) {
+          console.log('[Tracking] Tick coord error:', e);
+        }
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -192,6 +218,30 @@ export default function TrackingScreen() {
         completed: true,
         unlockTime: new Date().toISOString(),
       };
+
+      const skinType = useLumisStore.getState().skinType;
+      // Estimate Vitamin D
+      const vitD = calculateVitaminD(4, sessionSeconds / 60, skinType);
+
+      // Create detailed session object
+      const session = {
+        id: `session_${Date.now()}`,
+        type: selectedActivity || 'walk',
+        startTime: new Date().toISOString(),
+        durationSeconds: sessionSeconds,
+        lightMinutes: totalMinutes - accumulatedMinutesRef.current,
+        steps: steps,
+        calories: Math.round(steps * 0.05),
+        distance: parseFloat((steps * 0.0005).toFixed(2)),
+        lux: lux,
+        uvIndex: 4, // Mock or real UV from context/weather
+        temperature: 15.0,
+        vitaminD: vitD,
+        coordinates: sessionCoordinates
+      };
+
+      const addActivityToHistory = useLumisStore.getState().addActivityToHistory;
+      addActivityToHistory(session as any);
 
       updateTodayProgress(completedProgress);
       incrementStreak();

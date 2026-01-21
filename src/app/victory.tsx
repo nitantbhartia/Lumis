@@ -84,7 +84,7 @@ export default function VictoryScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.replace('/dashboard');
+    router.replace('/activity-summary');
   };
 
   return (
@@ -93,7 +93,7 @@ export default function VictoryScreen() {
         colors={['#1A1A2E', '#16213E', '#1A1A2E']}
         style={{ flex: 1 }}
       >
-        <Confetti active={true} count={30} colors={['#FFB347', '#FF8C00', '#FF6B35']} />
+        <Confetti />
 
         <View
           className="flex-1 items-center justify-between px-8"
