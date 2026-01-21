@@ -19,6 +19,7 @@
         "NSFaceIDUsageDescription": "Lumis uses FaceID to secure your app lock settings.",
         "NSHealthShareUsageDescription": "Lumis reads your outdoor activity and steps from HealthKit to track your daily progress automatically.",
         "NSHealthUpdateUsageDescription": "Lumis can sync your outdoor light exposure activities back to the Health app.",
+        "NSFamilyControlsUsageDescription": "Lumis uses Screen Time access to help you block distracting apps during your morning light routine to ensure you stay focused.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {

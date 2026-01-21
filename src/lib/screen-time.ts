@@ -3,6 +3,18 @@ import { Platform } from 'react-native';
 
 const isAvailable = Platform.OS === 'ios';
 
+export const getScreenTimePermissionStatus = async (): Promise<boolean> => {
+    if (!isAvailable) return false;
+    try {
+        const status = await ScreenTime.getAuthorizationStatus();
+        console.log('[ScreenTime] getScreenTimePermissionStatus result:', status);
+        return status;
+    } catch (error) {
+        console.error('[ScreenTime] Error checking status:', error);
+        return false;
+    }
+};
+
 export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
     if (!isAvailable) return false;
     try {
@@ -12,8 +24,6 @@ export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
         return result;
     } catch (error: any) {
         console.error('[ScreenTime] Authorization error:', error);
-        const errorMessage = error?.message || JSON.stringify(error);
-        alert(`Screen Time Error: ${errorMessage}`);
         return false;
     }
 };

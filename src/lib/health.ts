@@ -40,6 +40,23 @@ const permissions: HealthKitPermissions = {
 class HealthService {
   private isAvailable = Platform.OS === 'ios';
 
+  async getPermissionsStatus(): Promise<boolean> {
+    if (!this.isAvailable) return false;
+
+    try {
+      // Check Pedometer first as it's the primary source
+      const { granted } = await Pedometer.getPermissionsAsync();
+      if (granted) return true;
+
+      // Fallback to checking if HealthKit is initialized
+      // We don't have a direct "getStatus" for react-native-health easily without init
+      // But typically if we're this far, pedometer is enough for the UI check
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async requestPermissions(): Promise<boolean> {
     if (!this.isAvailable) {
       return false;

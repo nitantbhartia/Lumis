@@ -1,276 +1,507 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withRepeat,
-  withTiming,
-  FadeInDown,
-  FadeIn,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, Easing, interpolate } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import {
+  Info,
+  ArrowRight,
   Sun,
-  Flame,
-  Shield as ShieldIcon,
-  Settings,
-  BarChart3,
-  ChevronRight,
-  Lock,
-  Unlock,
-  Trophy,
-  Users,
-  Activity,
-  Zap,
-  Clock,
-  Layout
+  ChevronDown,
+  CloudSun,
+  Thermometer,
+  Droplets
 } from 'lucide-react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, G, Text as SvgText } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { blockApps, unblockApps, areAppsCurrentlyBlocked } from '@/lib/screen-time';
-import WeatherCard from '@/components/WeatherCard';
-import { GlassCard } from '@/components/GlassCard';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
-import { Confetti } from '@/components/Confetti';
-import { celebrationSequence } from '@/lib/haptics';
-import { CircadianChart } from '@/components/CircadianChart';
+import { useAuthStore } from '@/lib/state/auth-store';
+import CalendarModal from '../components/CalendarModal';
 
-function ProgressRing({
-  progress,
-  isCompleted,
-  size = 280,
-  strokeWidth = 14,
-}: {
-  progress: number;
-  isCompleted: boolean;
-  size?: number;
-  strokeWidth?: number;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - Math.min(progress, 1));
+const { width, height } = Dimensions.get('window');
 
-  const glowOpacity = useSharedValue(0);
+import { useWeather } from '@/lib/hooks/useWeather';
+
+// Simple weather icon component that renders different SVGs based on condition
+// We'll use lucide icons as a base but style them to look "graphic"
+const WeatherGraphic = ({ condition }: { condition: string }) => {
+  const c = condition.toLowerCase();
+  if (c.includes('cloud')) return <CloudSun size={24} color="#1A1A2E" />;
+  if (c.includes('rain') || c.includes('drizzle')) return <Droplets size={24} color="#4682B4" />;
+  if (c.includes('clear') || c.includes('sunny')) return <Sun size={24} color="#FFB347" strokeWidth={2} />;
+  return <CloudSun size={24} color="#1A1A2E" />;
+};
+
+// Sun Arc Component with Expandable Weather
+function SunArc({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  const weather = useWeather();
+  const rotation = useSharedValue(0);
+  const heightValue = useSharedValue(0);
+  const opacityValue = useSharedValue(0);
 
   useEffect(() => {
-    if (progress > 0.9 && !isCompleted) {
-      glowOpacity.value = withRepeat(
-        withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true
-      );
-    } else if (isCompleted) {
-      glowOpacity.value = 0.8;
-    } else {
-      glowOpacity.value = 0;
-    }
-  }, [progress, isCompleted]);
+    rotation.value = withTiming(expanded ? 180 : 0, { duration: 300 });
+    heightValue.value = withTiming(expanded ? 100 : 0, { duration: 300, easing: Easing.inOut(Easing.ease) });
+    opacityValue.value = withTiming(expanded ? 1 : 0, { duration: 200, delay: expanded ? 100 : 0 });
+  }, [expanded]);
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-    position: 'absolute',
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    backgroundColor: isCompleted ? '#4ADE80' : '#FFB347',
-    shadowColor: isCompleted ? '#4ADE80' : '#FFB347',
-    shadowRadius: 50,
-    shadowOpacity: 1,
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
   }));
 
-  const getGradientColors = () => {
-    if (isCompleted) {
-      return { id: 'successGradient', colors: ['#4ADE80', '#22C55E', '#16A34A'] };
-    }
-    return { id: 'progressGradient', colors: ['#FFE4B5', '#FFB347', '#FF6B35'] };
-  };
-
-  const gradient = getGradientColors();
+  const contentStyle = useAnimatedStyle(() => ({
+    height: heightValue.value,
+    opacity: opacityValue.value,
+    overflow: 'hidden',
+    marginTop: interpolate(heightValue.value, [0, 100], [0, 24]),
+  }));
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={glowStyle as any} />
-      <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Defs>
-          <SvgLinearGradient id={gradient.id} x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={gradient.colors[0]} />
-            <Stop offset="50%" stopColor={gradient.colors[1]} />
-            <Stop offset="100%" stopColor={gradient.colors[2]} />
-          </SvgLinearGradient>
-        </Defs>
-        <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#0F3460" strokeWidth={strokeWidth} fill="transparent" opacity={0.3} />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={`url(#${gradient.id})`}
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+    <View style={styles.sunArcContainer}>
+      {/* Chevron Toggle */}
+      <Pressable onPress={onToggle} style={styles.chevronContainer} hitSlop={10}>
+        <Animated.View style={chevronStyle}>
+          <ChevronDown size={24} color="rgba(0,0,0,0.1)" />
+        </Animated.View>
+      </Pressable>
+
+      <Svg width={width - 48} height={80} viewBox="0 0 300 80">
+        <Path
+          d="M 20 70 Q 150 -10 280 70"
+          stroke="#E0E0E0"
+          strokeWidth="2"
+          fill="none"
+          strokeDasharray="5,5"
         />
+        <Circle cx="150" cy="25" r="8" fill="#FFB347" />
+        <G transform="translate(150, 65)">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Path
+              key={i}
+              d="M 0 -10 L 0 -18"
+              stroke="#1A1A2E"
+              strokeWidth="1"
+              transform={`rotate(${i * 45 - 112.5})`}
+            />
+          ))}
+          <Circle cx="0" cy="0" r="5" stroke="#1A1A2E" strokeWidth="1" fill="none" />
+        </G>
       </Svg>
+
+      <View style={styles.sunTimesRow}>
+        <View style={styles.sunTimeItem}>
+          <Text style={styles.sunTimeLabel}>Sunrise</Text>
+          <Text style={styles.sunTimeValue}>6:49 <Text style={styles.sunTimeAmPm}>am</Text></Text>
+        </View>
+        <Pressable style={styles.weatherItem} onPress={onToggle}>
+          <WeatherGraphic condition={weather.condition} />
+          <Text style={styles.weatherCondition}>{weather.condition}</Text>
+        </Pressable>
+        <View style={styles.sunTimeItem}>
+          <Text style={styles.sunTimeLabel}>Sunset</Text>
+          <Text style={styles.sunTimeValue}>5:09 <Text style={styles.sunTimeAmPm}>pm</Text></Text>
+        </View>
+      </View>
+
+      {/* Expanded Weather Data */}
+      <Animated.View style={[styles.expandedWeatherContainer, contentStyle]}>
+        <View style={styles.weatherBox}>
+          <CloudSun size={20} color="#FFB347" />
+          <Text style={styles.weatherBoxLabel}>UV Index</Text>
+          <Text style={styles.weatherBoxValue}>{weather.uvIndex}</Text>
+        </View>
+        <View style={styles.weatherBox}>
+          <Thermometer size={20} color="#6495ED" />
+          <Text style={styles.weatherBoxLabel}>Temp</Text>
+          <Text style={styles.weatherBoxValue}>{weather.temperature}°C</Text>
+        </View>
+        <View style={styles.weatherBox}>
+          <Droplets size={20} color="#4682B4" />
+          <Text style={styles.weatherBoxLabel}>Humidity</Text>
+          <Text style={styles.weatherBoxValue}>{weather.humidity}%</Text>
+        </View>
+      </Animated.View>
     </View>
   );
 }
+
+import UserSettingsModal from '../components/UserSettingsModal';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
+  const userName = useAuthStore((s) => s.userName);
+  const currentStreak = useLumisStore((s) => s.currentStreak);
   const todayProgress = useLumisStore((s) => s.todayProgress);
   const dailyGoalMinutes = useLumisStore((s) => s.dailyGoalMinutes);
-  const currentStreak = useLumisStore((s) => s.currentStreak);
-  const blockedApps = useLumisStore((s) => s.blockedApps);
 
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [hasTriggeredCelebration, setHasTriggeredCelebration] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [peopleCount, setPeopleCount] = useState(142);
+  const [isWeatherExpanded, setIsWeatherExpanded] = useState(false);
 
-  const buttonScale = useSharedValue(1);
-  const progress = todayProgress.lightMinutes / dailyGoalMinutes;
-  const isCompleted = todayProgress.completed;
-  const blockedCount = blockedApps.filter((app) => app.isBlocked).length;
-
-  // Manage app blocking
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (blockedCount > 0) {
-        if (isCompleted) {
-          unblockApps();
-        } else {
-          blockApps();
-        }
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [isCompleted, blockedCount]);
+    // Make people count dynamic based on current hour/minute
+    const now = new Date();
+    const dynamicBase = 120 + (now.getHours() * 2) + Math.floor(now.getMinutes() / 5);
+    setPeopleCount(dynamicBase);
+  }, []);
+
+  const initials = userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase() : 'NB';
 
   const handleStartTracking = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/tracking');
+    router.push('/compass-lux');
   };
 
-  const handleOpenSettings = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/settings'); };
-  const handleOpenShield = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/shield'); };
+  const toggleWeather = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsWeatherExpanded(!isWeatherExpanded);
+  }
+
+  const progressPercent = Math.min((todayProgress.lightMinutes / dailyGoalMinutes) * 100, 100);
 
   return (
-    <View className="flex-1 bg-lumis-night">
-      <LinearGradient colors={['#10101E', '#16213E', '#10101E']} style={StyleSheet.absoluteFill} />
+    <View style={{ flex: 1, backgroundColor: '#FFF' }}>
+      <LinearGradient
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={StyleSheet.absoluteFill}
+      />
 
-      {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
-
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 120 }}
-      >
-        {/* Profile & Settings Header */}
-        <View className="px-8 flex-row justify-between items-center mb-10">
-          <View>
-            <Text className="text-lumis-sunrise/40 text-[10px] uppercase font-black tracking-[0.3em] mb-1">Your Biology</Text>
-            <Text className="text-lumis-dawn text-2xl" style={{ fontFamily: 'Syne_700Bold' }}>{isCompleted ? 'Harmony Found' : 'Seeking Balance'}</Text>
-          </View>
-          <Pressable onPress={handleOpenSettings} className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 items-center justify-center">
-            <Settings size={22} color="#FFFFFF" opacity={0.6} />
+      <View style={{ flex: 1, paddingTop: insets.top + 20 }}>
+        {/* Header Section */}
+        <View style={[styles.header, { zIndex: 99 }]}>
+          <Pressable onPress={() => setShowSettings(true)} style={styles.profileRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={styles.welcomeTextContainer}>
+              <Text style={styles.welcomeText}>Good evening,</Text>
+              <Text style={styles.userNameText}>{userName || 'nitant bhartia'}</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            style={styles.calendarTrigger}
+            hitSlop={20}
+            onPress={() => {
+              console.log('Opening calendar...');
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowCalendar(true);
+            }}
+          >
+            <Sun size={24} color="#1A1A2E" fill="#FFB347" />
+            <Text style={styles.streakCountText}>{currentStreak}</Text>
           </Pressable>
         </View>
 
-        {/* Floating Shield Status (Opal Inspired) */}
-        {!isCompleted && blockedCount > 0 && (
-          <Animated.View entering={FadeInDown} className="px-8 mb-8">
-            <Pressable onPress={handleOpenShield} className="overflow-hidden rounded-3xl border border-white/10">
-              <BlurView intensity={30} style={StyleSheet.absoluteFill} />
-              <LinearGradient colors={['rgba(255,179,71,0.1)', 'transparent']} style={{ padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-                <View className="w-10 h-10 rounded-full bg-lumis-golden/20 items-center justify-center">
-                  <Lock size={18} color="#FFB347" />
-                </View>
-                <View className="ml-4 flex-1">
-                  <Text className="text-lumis-dawn text-sm font-bold">App Shields Active</Text>
-                  <Text className="text-lumis-sunrise/50 text-xs">Unlocking as soon as you hit your goal.</Text>
-                </View>
-                <ChevronRight size={16} color="#FFFFFF" opacity={0.3} />
-              </LinearGradient>
-            </Pressable>
-          </Animated.View>
-        )}
+        {/* Action Content Area */}
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
+          {/* Community Stats */}
+          <View style={styles.communityRow}>
+            <Sun size={12} color="#FFB347" fill="#FFB347" />
+            <Text style={styles.communityText}>{peopleCount} PEOPLE GETTING THEIR DAILY SUN</Text>
+          </View>
 
-        {/* Main Progress Hub */}
-        <View className="items-center mb-12">
-          <View className="relative items-center justify-center">
-            <ProgressRing progress={progress} isCompleted={isCompleted} />
-            <View className="absolute items-center justify-center">
-              <Text className="text-lumis-sunrise/30 text-xs uppercase font-black tracking-widest mb-1">Light Intake</Text>
-              <Text className="text-6xl text-lumis-dawn" style={{ fontFamily: 'Syne_800ExtraBold' }}>
-                {Math.round(todayProgress.lightMinutes)}
-              </Text>
-              <Text className="text-lumis-sunrise/40 text-sm font-bold mt-1">/ {dailyGoalMinutes} min</Text>
+          {/* Active Tracking Progress Bar (Pill from IMG_9295) */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              {progressPercent > 0 && (
+                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+              )}
             </View>
           </View>
-        </View>
 
-        {/* Circadian Insights (Rise Science style) */}
-        <CircadianChart />
+          {/* How It Works */}
+          <Pressable
+            style={styles.howItWorksButton}
+            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+          >
+            <Info size={14} color="#1A1A2E" />
+            <Text style={styles.howItWorksText}>HOW IT WORKS</Text>
+          </Pressable>
 
-        {/* Weather & External Data */}
-        <View className="px-6 mt-8">
-          <WeatherCard />
-        </View>
-
-        {/* Quick Actions */}
-        <View className="px-6 mt-8 flex-row gap-4">
-          <View className="flex-1 bg-white/5 rounded-3xl p-6 border border-white/10">
-            <Flame size={24} color="#FF6B35" />
-            <Text className="text-2xl text-lumis-dawn font-black mt-2">{currentStreak}</Text>
-            <Text className="text-[10px] text-lumis-sunrise/40 uppercase font-bold tracking-widest mt-1">Day Streak</Text>
+          {/* Exposure Status */}
+          <View style={styles.exposureStatusContainer}>
+            <Text style={styles.exposureStatusText}>
+              Today you completed <Text style={styles.exposureValue}>{Math.round(todayProgress.lightMinutes)}</Text> minutes of <Text style={styles.exposureType}>Morning Light Exposure</Text>
+            </Text>
+            <Info size={18} color="rgba(0,0,0,0.3)" />
           </View>
-          <View className="flex-1 bg-white/5 rounded-3xl p-6 border border-white/10">
-            <Activity size={24} color="#3B82F6" />
-            <Text className="text-2xl text-lumis-dawn font-black mt-2">{todayProgress.steps.toLocaleString()}</Text>
-            <Text className="text-[10px] text-lumis-sunrise/40 uppercase font-bold tracking-widest mt-1">Morning Steps</Text>
-          </View>
-        </View>
 
-      </ScrollView>
+          {/* Spacer if needed to keep button visible */}
+          <View style={{ flex: 1, minHeight: 40 }} />
+        </ScrollView>
 
-      {/* Floating CTA */}
-      <View className="absolute bottom-10 left-8 right-8">
-        <Pressable
-          onPress={handleStartTracking}
-          onPressIn={() => { buttonScale.value = withSpring(0.96); }}
-          onPressOut={() => { buttonScale.value = withSpring(1); }}
-        >
-          <Animated.View style={{ transform: [{ scale: buttonScale.value }] }}>
-            <LinearGradient
-              colors={['#FFB347', '#FF8C00']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                paddingVertical: 22,
-                borderRadius: 28,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#FFB347',
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.3,
-                shadowRadius: 20,
-              }}
+        {/* White Bottom Card Area - Fixed at bottom */}
+        <View style={styles.bottomCardContainer}>
+          <View style={styles.bottomCard}>
+            <SunArc expanded={isWeatherExpanded} onToggle={toggleWeather} />
+
+            <Pressable
+              style={styles.mainCta}
+              onPress={handleStartTracking}
             >
-              <Zap size={22} color="#1A1A2E" strokeWidth={3} fill="#1A1A2E" />
-              <Text className="text-lumis-night text-lg font-black uppercase tracking-widest ml-3">Capture Light</Text>
-            </LinearGradient>
-          </Animated.View>
-        </Pressable>
+              <LinearGradient
+                colors={['#FFE4B5', '#FFB347', '#FF8C00']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.ctaGradient}
+              >
+                <Text style={styles.ctaText}>See you in the morning</Text>
+                <ArrowRight size={24} color="#1A1A2E" strokeWidth={2} />
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </View>
       </View>
+
+      <UserSettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
+      <CalendarModal
+        visible={showCalendar}
+        onClose={() => setShowCalendar(false)}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  welcomeTextContainer: {
+    justifyContent: 'center',
+  },
+  welcomeText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
+    color: '#1A1A2E',
+    opacity: 0.8,
+  },
+  userNameText: {
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  calendarTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  streakCountText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  communityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 12,
+    gap: 8,
+  },
+  communityText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+    opacity: 0.6,
+    letterSpacing: 1,
+  },
+  progressContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  progressBar: {
+    height: 32,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#354E35', // Dark tracking green
+    borderRadius: 16,
+  },
+  howItWorksButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 24,
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    gap: 6,
+  },
+  howItWorksText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+    letterSpacing: 0.5,
+  },
+  exposureStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  exposureStatusText: {
+    flex: 1,
+    fontSize: 20,
+    fontFamily: 'Outfit_400Regular',
+    color: '#1A1A2E',
+    lineHeight: 28,
+  },
+  exposureValue: {
+    fontFamily: 'Outfit_700Bold',
+  },
+  exposureType: {
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  bottomCardContainer: {
+    width: '100%',
+  },
+  bottomCard: {
+    width: '100%',
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: width * 0.4,
+    borderTopRightRadius: width * 0.4,
+    paddingTop: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  sunArcContainer: {
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 24,
+  },
+  chevronContainer: {
+    position: 'absolute',
+    top: -55,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    zIndex: 10,
+  },
+  sunTimesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: -15,
+  },
+  sunTimeItem: {
+    alignItems: 'center',
+  },
+  sunTimeLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
+    color: '#999',
+    marginBottom: 2,
+  },
+  sunTimeValue: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  sunTimeAmPm: {
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+  },
+  weatherItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weatherIcon: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  weatherCondition: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#777',
+    marginTop: 4,
+  },
+  expandedWeatherContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 0,
+    gap: 12,
+  },
+  weatherBox: {
+    flex: 1,
+    backgroundColor: '#F5F5F7',
+    borderRadius: 12,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  weatherBoxLabel: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#999',
+  },
+  weatherBoxValue: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  mainCta: {
+    width: '100%',
+    marginBottom: 40,
+    marginTop: 12,
+  },
+  ctaGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+  },
+  ctaText: {
+    fontSize: 20,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+  },
+});

@@ -1,20 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, TextInput, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Mail, Apple, Chrome } from 'lucide-react-native';
+import { Apple } from 'lucide-react-native';
+import Svg, { Path, G, Circle } from 'react-native-svg';
 import { useAuthStore } from '@/lib/state/auth-store';
-import { cn } from '@/lib/cn';
+
+const SunBurstIcon = () => (
+  <Svg width={180} height={180} viewBox="0 0 100 100">
+    <G transform="translate(50, 50)">
+      {Array.from({ length: 16 }).map((_, i) => (
+        <Path
+          key={i}
+          d="M0 -35 L0 -45"
+          stroke="#1A1A2E"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          transform={`rotate(${(i * 360) / 16})`}
+        />
+      ))}
+      <Circle cx="0" cy="0" r="10" fill="none" stroke="#1A1A2E" strokeWidth="1.5" />
+    </G>
+  </Svg>
+);
 
 export default function OnboardingAuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [authMethod, setAuthMethod] = useState<'apple' | 'google' | 'email' | null>(null);
-  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const socialLogin = useAuthStore((s) => s.socialLogin);
   const setUserName = useAuthStore((s) => s.setUserName);
 
@@ -23,7 +38,6 @@ export default function OnboardingAuthScreen() {
     setIsLoading(true);
 
     try {
-      // In production, this would use expo-apple-authentication
       const result = await socialLogin({
         provider: 'apple',
         idToken: 'mock_token_' + Date.now(),
@@ -34,258 +48,134 @@ export default function OnboardingAuthScreen() {
       if (result.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setUserName('Apple User');
-        router.push('/onboarding-permissions');
+        router.push('/onboarding-success');
       }
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsLoading(true);
-
-    try {
-      // In production, this would use @react-native-google-signin/google-signin
-      const result = await socialLogin({
-        provider: 'google',
-        idToken: 'mock_token_' + Date.now(),
-        email: 'user@gmail.com',
-        name: 'Google User',
-      });
-
-      if (result.success) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setUserName('Google User');
-        router.push('/onboarding-permissions');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailOTP = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setUserName(email.split('@')[0]);
-      router.push('/onboarding-email-otp');
     }
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" className="flex-1">
-      <View className="flex-1">
-        <LinearGradient
-          colors={['#1A1A2E', '#16213E', '#0F3460']}
-          style={{ flex: 1 }}
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={{ flex: 1 }}
+      >
+        <View
+          style={{
+            flex: 1,
+            paddingTop: insets.top + 60,
+            paddingBottom: insets.bottom + 24,
+            paddingHorizontal: 32,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
         >
-          <ScrollView
-            contentContainerStyle={{
-              paddingTop: insets.top + 20,
-              paddingBottom: insets.bottom + 40,
-              paddingHorizontal: 24,
-            }}
-            scrollEnabled={false}
-          >
-            <View className="flex-1 gap-8">
-              {/* Header */}
-              <View>
-                <Text
-                  className="text-5xl text-lumis-dawn mb-2"
-                  style={{ fontFamily: 'Outfit_700Bold' }}
-                >
-                  Save your{'\n'}progress
-                </Text>
-                <Text
-                  className="text-lg text-lumis-sunrise"
-                  style={{ fontFamily: 'Outfit_400Regular' }}
-                >
-                  Who are we waking up?
-                </Text>
+          {/* Icon Section */}
+          <View style={styles.iconContainer}>
+            <SunBurstIcon />
+          </View>
+
+          {/* Text Section */}
+          <View style={styles.textContainer}>
+            <Text style={styles.title}>
+              Sign up or log in to start seeking the Sun
+            </Text>
+          </View>
+
+          {/* Action Section */}
+          <View style={styles.actionsContainer}>
+            <Pressable
+              onPress={handleAppleSignIn}
+              disabled={isLoading}
+            >
+              <View style={[
+                styles.appleButton,
+                { backgroundColor: '#000000' }, // Hardcoded black
+                isLoading && { opacity: 0.5 }
+              ]}>
+                <Apple size={24} color="#FFFFFF" fill="#FFFFFF" />
+                <Text style={styles.appleButtonText}>Continue with Apple</Text>
               </View>
+            </Pressable>
 
-              {/* Auth Methods */}
-              <View className="gap-3">
-                {/* Apple Sign In */}
-                <Pressable
-                  onPress={handleAppleSignIn}
-                  disabled={isLoading}
-                  className="active:scale-95"
-                >
-                  <LinearGradient
-                    colors={['#FFFFFF', '#F5F5F5']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      paddingVertical: 16,
-                      borderRadius: 12,
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: 8,
-                      opacity: isLoading ? 0.5 : 1,
-                    }}
-                  >
-                    <Apple size={20} color="#000" strokeWidth={2} />
-                    <Text
-                      className="text-lg text-black"
-                      style={{ fontFamily: 'Outfit_600SemiBold' }}
-                    >
-                      Continue with Apple
-                    </Text>
-                  </LinearGradient>
-                </Pressable>
-
-                {/* Google Sign In */}
-                <Pressable
-                  onPress={handleGoogleSignIn}
-                  disabled={isLoading}
-                  className="active:scale-95"
-                >
-                  <LinearGradient
-                    colors={['#FFFFFF', '#F5F5F5']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      paddingVertical: 16,
-                      borderRadius: 12,
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: 8,
-                      opacity: isLoading ? 0.5 : 1,
-                    }}
-                  >
-                    <Chrome size={20} color="#1F2937" strokeWidth={2} />
-                    <Text
-                      className="text-lg text-black"
-                      style={{ fontFamily: 'Outfit_600SemiBold' }}
-                    >
-                      Continue with Google
-                    </Text>
-                  </LinearGradient>
-                </Pressable>
-
-                {/* Divider */}
-                <View className="flex-row items-center gap-4 my-2">
-                  <View className="flex-1 h-px bg-lumis-dusk" />
-                  <Text
-                    className="text-lumis-sunrise text-sm"
-                    style={{ fontFamily: 'Outfit_400Regular' }}
-                  >
-                    or
-                  </Text>
-                  <View className="flex-1 h-px bg-lumis-dusk" />
-                </View>
-
-                {/* Email Input */}
-                {authMethod === 'email' ? (
-                  <View className="gap-3">
-                    <TextInput
-                      placeholder="your@email.com"
-                      placeholderTextColor="#FFE4B5"
-                      value={email}
-                      onChangeText={setEmail}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                      editable={!isLoading}
-                      className="w-full px-4 py-4 rounded-lg bg-lumis-twilight text-lumis-dawn"
-                      style={{
-                        fontFamily: 'Outfit_400Regular',
-                        borderWidth: 1,
-                        borderColor: '#0F3460',
-                      }}
-                    />
-                    <Pressable
-                      onPress={handleEmailOTP}
-                      disabled={!email || isLoading}
-                      className="active:scale-95"
-                    >
-                      <LinearGradient
-                        colors={['#FFB347', '#FF8C00', '#FF6B35']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{
-                          paddingVertical: 16,
-                          borderRadius: 12,
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          gap: 8,
-                          opacity: !email || isLoading ? 0.5 : 1,
-                        }}
-                      >
-                        <Text
-                          className="text-lg text-lumis-night"
-                          style={{ fontFamily: 'Outfit_600SemiBold' }}
-                        >
-                          Send Magic Link
-                        </Text>
-                      </LinearGradient>
-                    </Pressable>
-                    <Pressable onPress={() => setAuthMethod(null)}>
-                      <Text
-                        className="text-lumis-sunrise text-center text-base"
-                        style={{ fontFamily: 'Outfit_500Medium' }}
-                      >
-                        Back
-                      </Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Pressable
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setAuthMethod('email');
-                    }}
-                    className="active:scale-95"
-                  >
-                    <View
-                      style={{
-                        paddingVertical: 16,
-                        borderRadius: 12,
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        gap: 8,
-                        borderWidth: 1,
-                        borderColor: '#FFB347',
-                      }}
-                    >
-                      <Mail size={20} color="#FFB347" strokeWidth={2} />
-                      <Text
-                        className="text-lg text-lumis-golden"
-                        style={{ fontFamily: 'Outfit_600SemiBold' }}
-                      >
-                        Use Email
-                      </Text>
-                    </View>
-                  </Pressable>
-                )}
-              </View>
-
-              {/* Security Note */}
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  backgroundColor: '#16213E',
-                  borderRadius: 8,
-                  borderLeftWidth: 3,
-                  borderLeftColor: '#FFB347',
-                }}
+            {/* Terms & Privacy */}
+            <Text style={styles.footerText}>
+              By continuing to use Lumis, you agree to our{' '}
+              <Text
+                style={styles.linkText}
+                onPress={() => Linking.openURL('https://example.com/terms')}
               >
-                <Text
-                  className="text-sm text-lumis-sunrise"
-                  style={{ fontFamily: 'Outfit_400Regular' }}
-                >
-                  Your authentication is secure. This data never leaves your device.
-                </Text>
-              </View>
-            </View>
-          </ScrollView>
-        </LinearGradient>
-      </View>
-    </KeyboardAvoidingView>
+                Terms of Service
+              </Text>{' '}
+              and{' '}
+              <Text
+                style={styles.linkText}
+                onPress={() => Linking.openURL('https://example.com/privacy')}
+              >
+                Privacy Policy
+              </Text>
+              . Personal data added to Lumis is private.
+            </Text>
+          </View>
+        </View>
+      </LinearGradient>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    marginTop: 40,
+  },
+  textContainer: {
+    width: '100%',
+    paddingHorizontal: 0,
+    marginTop: 20,
+  },
+  title: {
+    fontSize: 42,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+    lineHeight: 52,
+    textAlign: 'left',
+  },
+  actionsContainer: {
+    width: '100%',
+    gap: 20,
+    marginBottom: 20,
+  },
+  appleButton: {
+    flexDirection: 'row',
+    backgroundColor: '#000000', // Pure black
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#000',
+  },
+  appleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontFamily: 'Outfit_500Medium',
+  },
+  footerText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+    color: '#1A1A2E',
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  linkText: {
+    textDecorationLine: 'underline',
+  },
+});

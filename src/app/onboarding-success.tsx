@@ -45,7 +45,7 @@ export default function OnboardingSuccessScreen() {
     if (!hasPremiumAccess) {
       router.replace('/premium-walkthrough');
     } else {
-      router.replace('/dashboard');
+      router.replace('/(tabs)');
     }
   };
 
@@ -98,16 +98,16 @@ export default function OnboardingSuccessScreen() {
   return (
     <View className="flex-1">
       <LinearGradient
-        colors={['#1A1A2E', '#16213E', '#1A1B3A']}
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
         style={{ flex: 1 }}
       >
         <View
           className="flex-1 items-center justify-between px-8"
           style={{ paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }}
         >
-          {/* Header Icon */}
           <Animated.View entering={FadeIn.delay(200)} className="items-center">
-            <Sparkles size={24} color="#FFB347" opacity={0.6} />
+            <Sparkles size={24} color="#1A1A2E" opacity={0.6} />
           </Animated.View>
 
           {/* Main Visual Section */}
@@ -153,16 +153,16 @@ export default function OnboardingSuccessScreen() {
             {/* Supportive Text Content */}
             <Animated.View style={textStyle} className="items-center mt-12 px-4">
               <Text
-                className="text-4xl text-lumis-dawn text-center leading-tight"
-                style={{ fontFamily: 'Outfit_700Bold' }}
+                className="text-4xl text-center leading-tight"
+                style={{ fontFamily: 'Outfit_700Bold', color: '#1A1A2E' }}
               >
                 Welcome to{'\n'}the Light
               </Text>
               <Text
-                className="text-lg text-lumis-sunrise/70 text-center mt-4 leading-relaxed"
-                style={{ fontFamily: 'Outfit_400Regular' }}
+                className="text-lg text-center mt-4 leading-relaxed"
+                style={{ fontFamily: 'Outfit_400Regular', color: '#333' }}
               >
-                Your biology is now synced with the sun, <Text className="text-lumis-golden font-bold">{displayName}</Text>. Let's start your first golden window.
+                Your biology is now synced with the sun, <Text style={{ color: '#FF8C00', fontWeight: 'bold' }}>{displayName}</Text>. Let's start your first golden window.
               </Text>
             </Animated.View>
           </View>
@@ -202,8 +202,8 @@ export default function OnboardingSuccessScreen() {
               </LinearGradient>
             </Pressable>
 
-            <Text className="text-lumis-sunrise/30 text-center mt-6 text-xs uppercase tracking-[0.2em]">
-              Compassionately Engineered
+            <Text style={{ color: '#666', textAlign: 'center', marginTop: 24, fontSize: 10, letterSpacing: 2 }}>
+              COMPASSIONATELY ENGINEERED
             </Text>
           </Animated.View>
         </View>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,17 +25,17 @@ import {
   Shield,
 } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { GlassCard } from '@/components/GlassCard';
+import { useAuthStore } from '@/lib/state/auth-store';
 
 const iconMap: Record<string, React.ReactNode> = {
-  instagram: <Instagram size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  video: <Video size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  twitter: <Twitter size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  facebook: <Facebook size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  youtube: <Youtube size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  'message-circle': <MessageCircle size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  ghost: <Ghost size={28} color="#FFF8E7" strokeWidth={1.5} />,
-  film: <Film size={28} color="#FFF8E7" strokeWidth={1.5} />,
+  instagram: <Instagram size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  video: <Video size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  twitter: <Twitter size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  facebook: <Facebook size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  youtube: <Youtube size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  'message-circle': <MessageCircle size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  ghost: <Ghost size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  film: <Film size={28} color="#1A1A2E" strokeWidth={1.5} />,
 };
 
 export default function AppSelectionScreen() {
@@ -43,7 +43,6 @@ export default function AppSelectionScreen() {
   const insets = useSafeAreaInsets();
   const blockedApps = useLumisStore((s) => s.blockedApps);
   const toggleAppBlocked = useLumisStore((s) => s.toggleAppBlocked);
-  const setHasCompletedOnboarding = useLumisStore((s) => s.setHasCompletedOnboarding);
 
   const buttonScale = useSharedValue(1);
 
@@ -56,7 +55,6 @@ export default function AppSelectionScreen() {
   const handleToggle = (appId: string) => {
     const app = blockedApps.find((a) => a.id === appId);
 
-    // Check limit for free users (allow unblocking, but block adding 4th)
     if (!hasPremiumAccess && selectedCount >= 3 && app && !app.isBlocked) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       router.push('/premium');
@@ -69,7 +67,6 @@ export default function AppSelectionScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Don't set onboarding complete yet, now moving to Auth -> Permissions
     router.push('/onboarding-auth');
   };
 
@@ -78,50 +75,39 @@ export default function AppSelectionScreen() {
   }));
 
   return (
-    <View className="flex-1">
-      <LinearGradient colors={['#1A1A2E', '#16213E', '#0F3460']} style={{ flex: 1 }}>
-        <View className="flex-1" style={{ paddingTop: insets.top + 20 }}>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={{ flex: 1 }}
+      >
+        <View style={{ flex: 1, paddingTop: insets.top + 20 }}>
           {/* Header */}
-          <View className="px-8 mb-6">
-            <View className="flex-row items-center mb-2">
-              <Shield size={28} color="#FFB347" strokeWidth={1.5} />
-              <Text
-                className="text-3xl text-lumis-dawn ml-3"
-                style={{ fontFamily: 'Outfit_700Bold' }}
-              >
-                Shield Apps
-              </Text>
+          <View style={styles.header}>
+            <View style={styles.headerTitleRow}>
+              <Shield size={28} color="#1A1A2E" strokeWidth={1.5} />
+              <Text style={styles.headerTitle}>Shield Apps</Text>
             </View>
-            <Text
-              className="text-base text-lumis-sunrise/70"
-              style={{ fontFamily: 'Outfit_400Regular' }}
-            >
+            <Text style={styles.headerSubtitle}>
               Select the apps you want to lock until you get your morning light.
             </Text>
           </View>
 
           {/* Selection counter */}
-          <View className="px-8 mb-4">
-            <GlassCard variant="flat">
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-2xl bg-lumis-golden/20 items-center justify-center mr-3">
-                  <Text className="text-lumis-golden text-lg" style={{ fontFamily: 'Outfit_700Bold' }}>
-                    {selectedCount}
-                  </Text>
-                </View>
-                <Text
-                  className="text-lumis-sunrise text-base"
-                  style={{ fontFamily: 'Outfit_500Medium' }}
-                >
-                  {selectedCount === 1 ? 'app' : 'apps'} will be shielded each morning
-                </Text>
+          <View style={styles.counterSection}>
+            <View style={styles.counterCard}>
+              <View style={styles.counterCircle}>
+                <Text style={styles.counterValue}>{selectedCount}</Text>
               </View>
-            </GlassCard>
+              <Text style={styles.counterText}>
+                {selectedCount === 1 ? 'app' : 'apps'} will be shielded each morning
+              </Text>
+            </View>
           </View>
 
           {/* App list */}
           <ScrollView
-            className="flex-1 px-8"
+            style={styles.appList}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
           >
@@ -130,96 +116,68 @@ export default function AppSelectionScreen() {
                 key={app.id}
                 entering={FadeInDown.delay(index * 50).duration(400)}
                 layout={Layout.springify()}
-                className="mb-3"
+                style={styles.appItemContainer}
               >
-                <GlassCard
-                  variant={app.isBlocked ? 'elevated' : 'default'}
+                <Pressable
                   onPress={() => handleToggle(app.id)}
-                  glow={app.isBlocked}
+                  style={[
+                    styles.appCard,
+                    app.isBlocked && styles.appCardSelected
+                  ]}
                 >
-                  <View className="flex-row items-center">
-                    {/* App icon */}
-                    <View
-                      className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 ${app.isBlocked ? 'bg-lumis-golden/20' : 'bg-lumis-dusk/40'
-                        }`}
-                    >
+                  <View style={styles.appInfoRow}>
+                    <View style={[
+                      styles.appIconContainer,
+                      app.isBlocked ? styles.iconBgSelected : styles.iconBgDefault
+                    ]}>
                       {iconMap[app.icon]}
                     </View>
 
-                    {/* App name */}
-                    <View className="flex-1">
-                      <Text
-                        className="text-lumis-dawn text-lg"
-                        style={{ fontFamily: 'Outfit_600SemiBold' }}
-                      >
-                        {app.name}
-                      </Text>
-                      <Text
-                        className={`text-sm ${app.isBlocked ? 'text-lumis-golden/80' : 'text-lumis-sunrise/50'
-                          }`}
-                        style={{ fontFamily: 'Outfit_400Regular' }}
-                      >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.appName}>{app.name}</Text>
+                      <Text style={[
+                        styles.appStatus,
+                        app.isBlocked ? styles.statusSelected : styles.statusDefault
+                      ]}>
                         {app.isBlocked ? 'Will be shielded' : 'Tap to shield'}
                       </Text>
                     </View>
 
-                    {/* Checkbox */}
-                    <View
-                      className={`w-8 h-8 rounded-full items-center justify-center ${app.isBlocked ? 'bg-lumis-golden' : 'border-2 border-lumis-dusk/50'
-                        }`}
-                    >
-                      {app.isBlocked && <Check size={18} color="#1A1A2E" strokeWidth={3} />}
+                    <View style={[
+                      styles.checkbox,
+                      app.isBlocked && styles.checkboxSelected
+                    ]}>
+                      {app.isBlocked && <Check size={18} color="#FFF" strokeWidth={3} />}
                     </View>
                   </View>
-                </GlassCard>
+                </Pressable>
               </Animated.View>
             ))}
           </ScrollView>
 
           {/* Continue button */}
-          <View className="px-8" style={{ paddingBottom: insets.bottom + 20 }}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
             <Animated.View style={buttonAnimStyle}>
               <Pressable
                 onPress={handleContinue}
-                onPressIn={() => {
-                  buttonScale.value = withSpring(0.95);
-                }}
-                onPressOut={() => {
-                  buttonScale.value = withSpring(1);
-                }}
+                onPressIn={() => { buttonScale.value = withSpring(0.95); }}
+                onPressOut={() => { buttonScale.value = withSpring(1); }}
                 disabled={selectedCount === 0}
-                className="w-full"
+                style={styles.buttonWrapper}
               >
                 <LinearGradient
-                  colors={
-                    selectedCount === 0
-                      ? ['#16213E', '#0F3460', '#16213E']
-                      : ['#FFB347', '#FF8C00', '#FF6B35']
-                  }
+                  colors={selectedCount === 0 ? ['#CCC', '#BBB'] : ['#FFB347', '#FF8C00']}
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    paddingVertical: 18,
-                    borderRadius: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: selectedCount === 0 ? 'transparent' : '#FF8C00',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 12,
-                    elevation: 8,
-                  }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.button}
                 >
-                  <Text
-                    className={`text-lg mr-2 ${selectedCount === 0 ? 'text-lumis-sunrise/40' : 'text-lumis-night'}`}
-                    style={{ fontFamily: 'Outfit_600SemiBold' }}
-                  >
-                    {selectedCount === 0 ? 'Select at least 1 app' : 'Start Your Journey'}
+                  <Text style={[
+                    styles.buttonText,
+                    selectedCount === 0 && { color: '#666' }
+                  ]}>
+                    {selectedCount === 0 ? 'Select at least 1 app' : 'Continue'}
                   </Text>
-                  {selectedCount > 0 && (
-                    <ChevronRight size={20} color="#1A1A2E" strokeWidth={2.5} />
-                  )}
+                  {selectedCount > 0 && <ChevronRight size={20} color="#1A1A2E" strokeWidth={2.5} />}
                 </LinearGradient>
               </Pressable>
             </Animated.View>
@@ -229,3 +187,140 @@ export default function AppSelectionScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
+    color: '#333',
+    lineHeight: 22,
+  },
+  counterSection: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  counterCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 20,
+    padding: 12,
+  },
+  counterCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFB347',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  counterValue: {
+    fontSize: 18,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  counterText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+  },
+  appList: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  appItemContainer: {
+    marginBottom: 12,
+  },
+  appCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  appCardSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: '#FFB347',
+  },
+  appInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  iconBgDefault: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  iconBgSelected: {
+    backgroundColor: '#FFB34780',
+  },
+  appName: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  appStatus: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+  },
+  statusDefault: {
+    color: '#666',
+  },
+  statusSelected: {
+    color: '#FF8C00',
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#FFB347',
+    borderColor: '#FFB347',
+  },
+  footer: {
+    paddingHorizontal: 24,
+  },
+  buttonWrapper: {
+    width: '100%',
+  },
+  button: {
+    paddingVertical: 18,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+});

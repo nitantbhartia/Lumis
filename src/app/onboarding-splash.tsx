@@ -39,7 +39,7 @@ export default function OnboardingSplashScreen() {
 
     // Auto-navigate after 3 seconds
     const timer = setTimeout(() => {
-      router.push('/onboarding-value-prop');
+      router.push('/onboarding-question-sunlight');
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -53,7 +53,8 @@ export default function OnboardingSplashScreen() {
   return (
     <View className="flex-1">
       <LinearGradient
-        colors={['#1A1A2E', '#16213E', '#0F3460']}
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
         style={{ flex: 1 }}
       >
         <View className="flex-1 items-center justify-center">

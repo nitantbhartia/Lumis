@@ -37,8 +37,12 @@ export default function OnboardingGoalSetupScreen() {
   }));
 
   return (
-    <View className="flex-1 bg-lumis-night">
-      <LinearGradient colors={['#1A1A2E', '#16213E', '#0F3460']} style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
@@ -47,18 +51,16 @@ export default function OnboardingGoalSetupScreen() {
           <View className="px-8">
             {/* Header */}
             <Animated.View entering={FadeInDown.duration(400)} className="mb-8">
-              <View className="w-20 h-20 rounded-3xl bg-lumis-golden/20 items-center justify-center mb-6">
-                <Sun size={40} color="#FFB347" strokeWidth={1.5} />
+              <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(255, 179, 71, 0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+                <Sun size={40} color="#1A1A2E" strokeWidth={1.5} />
               </View>
               <Text
-                className="text-4xl text-lumis-dawn mb-3"
-                style={{ fontFamily: 'Outfit_700Bold' }}
+                style={{ fontSize: 36, fontFamily: 'Outfit_700Bold', color: '#1A1A2E', marginBottom: 12 }}
               >
                 Set Your Goal
               </Text>
               <Text
-                className="text-lg text-lumis-sunrise/70"
-                style={{ fontFamily: 'Outfit_400Regular' }}
+                style={{ fontSize: 18, fontFamily: 'Outfit_400Regular', color: '#333' }}
               >
                 How many minutes of sunlight do you want to get each morning?
               </Text>
@@ -89,15 +91,22 @@ export default function OnboardingGoalSetupScreen() {
                       >
                         <View className="flex-row items-center">
                           <View
-                            className={`w-14 h-14 rounded-2xl items-center justify-center mr-4 ${
-                              isSelected ? 'bg-lumis-golden/20' : 'bg-lumis-dusk/30'
-                            }`}
+                            style={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: 16,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginRight: 16,
+                              backgroundColor: isSelected ? 'rgba(255, 179, 71, 0.2)' : 'rgba(0, 0, 0, 0.05)'
+                            }}
                           >
                             <Text
-                              className={`text-2xl ${
-                                isSelected ? 'text-lumis-golden' : 'text-lumis-sunrise/60'
-                              }`}
-                              style={{ fontFamily: 'Outfit_700Bold' }}
+                              style={{
+                                fontSize: 24,
+                                fontFamily: 'Outfit_700Bold',
+                                color: isSelected ? '#FF8C00' : '#666'
+                              }}
                             >
                               {minutes}
                             </Text>
@@ -105,16 +114,22 @@ export default function OnboardingGoalSetupScreen() {
                           <View className="flex-1">
                             <View className="flex-row items-center">
                               <Text
-                                className="text-lumis-dawn text-lg"
-                                style={{ fontFamily: 'Outfit_600SemiBold' }}
+                                style={{
+                                  fontSize: 18,
+                                  fontFamily: 'Outfit_600SemiBold',
+                                  color: '#1A1A2E'
+                                }}
                               >
                                 {minutes} Minutes
                               </Text>
                               {isRecommended && (
-                                <View className="ml-2 bg-success/20 px-2 py-1 rounded-full">
+                                <View style={{ marginLeft: 8, backgroundColor: '#4ADE8020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
                                   <Text
-                                    className="text-success text-xs"
-                                    style={{ fontFamily: 'Outfit_600SemiBold' }}
+                                    style={{
+                                      fontSize: 10,
+                                      fontFamily: 'Outfit_600SemiBold',
+                                      color: '#22C55E'
+                                    }}
                                   >
                                     Recommended
                                   </Text>
@@ -122,10 +137,11 @@ export default function OnboardingGoalSetupScreen() {
                               )}
                             </View>
                             <Text
-                              className={`text-sm ${
-                                isSelected ? 'text-lumis-golden/80' : 'text-lumis-sunrise/50'
-                              }`}
-                              style={{ fontFamily: 'Outfit_400Regular' }}
+                              style={{
+                                fontSize: 13,
+                                fontFamily: 'Outfit_400Regular',
+                                color: isSelected ? '#FF8C00' : '#666'
+                              }}
                             >
                               {minutes === 10 && 'Quick morning boost'}
                               {minutes === 15 && 'Perfect for most people'}
@@ -134,8 +150,8 @@ export default function OnboardingGoalSetupScreen() {
                             </Text>
                           </View>
                           {isSelected && (
-                            <View className="w-8 h-8 rounded-full bg-lumis-golden items-center justify-center">
-                              <Check size={18} color="#1A1A2E" strokeWidth={3} />
+                            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFB347', alignItems: 'center', justifyContent: 'center' }}>
+                              <Check size={18} color="#FFF" strokeWidth={3} />
                             </View>
                           )}
                         </View>

@@ -16,6 +16,14 @@ export async function requestAuthorization(): Promise<boolean> {
     return await LumisScreenTime.requestAuthorization();
 }
 
+export async function getAuthorizationStatus(): Promise<boolean> {
+    if (!LumisScreenTime || !LumisScreenTime.getAuthorizationStatus) {
+        console.warn('[LumisScreenTime] getAuthorizationStatus not available on native side');
+        return false;
+    }
+    return await LumisScreenTime.getAuthorizationStatus();
+}
+
 export function blockAllApps(): boolean {
     if (!LumisScreenTime) return false;
     return LumisScreenTime.blockAllApps();

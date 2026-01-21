@@ -109,6 +109,14 @@ interface LumisState {
   overachieverDaysCount: number;
   daysWithoutEmergencyUnlock: number;
   hasHadStreakBefore: boolean;
+
+  // New Onboarding Data
+  sunlightFrequency: 'daily' | 'few_times' | 'once_a_week' | 'rarely' | null;
+  setSunlightFrequency: (value: 'daily' | 'few_times' | 'once_a_week' | 'rarely') => void;
+
+  // Daily Activity Selection
+  selectedActivity: 'walk' | 'run' | 'meditate' | 'sit_soak' | null;
+  setSelectedActivity: (value: 'walk' | 'run' | 'meditate' | 'sit_soak' | null) => void;
 }
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -140,8 +148,8 @@ export const useLumisStore = create<LumisState>()(
 
       // Blocked Apps
       blockedApps: [
-        { id: 'instagram', name: 'Instagram', icon: 'instagram', isBlocked: true },
-        { id: 'tiktok', name: 'TikTok', icon: 'video', isBlocked: true },
+        { id: 'instagram', name: 'Instagram', icon: 'instagram', isBlocked: false },
+        { id: 'tiktok', name: 'TikTok', icon: 'video', isBlocked: false },
         { id: 'twitter', name: 'X / Twitter', icon: 'twitter', isBlocked: false },
         { id: 'facebook', name: 'Facebook', icon: 'facebook', isBlocked: false },
         { id: 'youtube', name: 'YouTube', icon: 'youtube', isBlocked: false },
@@ -436,6 +444,14 @@ export const useLumisStore = create<LumisState>()(
       overachieverDaysCount: 0,
       daysWithoutEmergencyUnlock: 0,
       hasHadStreakBefore: false,
+
+      // New Onboarding Data
+      sunlightFrequency: null,
+      setSunlightFrequency: (value) => set({ sunlightFrequency: value }),
+
+      // Daily Activity Selection
+      selectedActivity: null,
+      setSelectedActivity: (value) => set({ selectedActivity: value }),
     }),
     {
       name: 'lumis-storage',

@@ -40,6 +40,13 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
 class NotificationService {
   private permissionGranted = false;
 
+  async getPermissionStatus(): Promise<boolean> {
+    if (!Device.isDevice) return false;
+    const { status } = await Notifications.getPermissionsAsync();
+    this.permissionGranted = status === 'granted';
+    return this.permissionGranted;
+  }
+
   async requestPermissions(): Promise<boolean> {
     if (!Device.isDevice) {
       console.log('Notifications only work on physical devices');

@@ -20,6 +20,16 @@ public class LumisScreenTimeModule: Module {
         promise.reject("UNSUPPORTED", "Screen Time requires iOS 16 or later")
       }
     }
+
+    AsyncFunction("getAuthorizationStatus") { (promise: Promise) in
+      if #available(iOS 15.0, *) {
+        let status = AuthorizationCenter.shared.authorizationStatus
+        NSLog("[LumisScreenTime] getAuthorizationStatus: \(status)")
+        promise.resolve(status == .approved)
+      } else {
+        promise.resolve(false)
+      }
+    }
     
     // NOTE: Full app blocking requires FamilyActivityPicker (SwiftUI) to obtain ApplicationTokens.
     // This stub implementation will be replaced with a full SwiftUI flow later.

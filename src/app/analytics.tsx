@@ -1,16 +1,38 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, Dimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { X, Sun, Flame, Calendar, TrendingUp, Award, Trophy } from 'lucide-react-native';
+import { Sun, Flame, Calendar, Trophy, Zap, Clock } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { GlassCard } from '@/components/GlassCard';
-import { StatCard } from '@/components/StatCard';
 
 const { width } = Dimensions.get('window');
+
+// Reusable Stat Component
+// Reusable Stat Component
+interface StatBoxProps {
+  label: string;
+  value: string | number;
+  unit?: string;
+  icon: any;
+  color: string;
+}
+
+const StatBox = ({ label, value, unit, icon: Icon, color }: StatBoxProps) => (
+  <View style={styles.statBox}>
+    <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+      <Icon size={20} color={color} />
+    </View>
+    <View>
+      <Text style={styles.statValue}>
+        {value}
+        {unit && <Text style={styles.statUnit}> {unit}</Text>}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  </View>
+);
 
 export default function AnalyticsScreen() {
   const router = useRouter();
@@ -21,11 +43,7 @@ export default function AnalyticsScreen() {
   const totalDaysCompleted = useLumisStore((s) => s.totalDaysCompleted);
   const progressHistory = useLumisStore((s) => s.progressHistory);
   const dailyGoalMinutes = useLumisStore((s) => s.dailyGoalMinutes);
-
-  const handleClose = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  };
+  const totalHoursInSunlight = useLumisStore((s) => s.totalHoursInSunlight);
 
   // Generate last 7 days data
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -35,223 +53,318 @@ export default function AnalyticsScreen() {
     const dayProgress = progressHistory.find((p) => p.date === dateStr);
     return {
       date: dateStr,
-      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
       minutes: dayProgress?.lightMinutes ?? 0,
       completed: dayProgress?.completed ?? false,
     };
   });
 
-  const maxMinutes = Math.max(...last7Days.map((d) => d.minutes), dailyGoalMinutes);
+  const maxMinutes = Math.max(...last7Days.map((d) => d.minutes), dailyGoalMinutes * 1.5, 30); // Prevent flat bars
   const totalMinutesThisWeek = last7Days.reduce((sum, d) => sum + d.minutes, 0);
-  const completedDaysThisWeek = last7Days.filter((d) => d.completed).length;
 
   return (
-    <View className="flex-1 bg-lumis-night">
-      <LinearGradient colors={['#1A1A2E', '#16213E', '#0F3460']} style={{ flex: 1 }}>
-        <View
-          className="flex-row items-center justify-between px-6 pb-6"
-          style={{ paddingTop: insets.top + 20 }}
-        >
-          <View>
-            <Text
-              className="text-4xl text-lumis-dawn"
-              style={{ fontFamily: 'Syne_800ExtraBold' }}
-            >
-              ANALYTICS
-            </Text>
-            <View className="h-1 w-12 bg-lumis-accent rounded-full mt-1" />
-          </View>
-          <Pressable
-            onPress={handleClose}
-            className="w-12 h-12 rounded-2xl bg-white/5 items-center justify-center border border-white/10"
-          >
-            <X size={22} color="#FFF8E7" />
-          </Pressable>
+    <View style={{ flex: 1, backgroundColor: '#FFF' }}>
+      <LinearGradient
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <View style={{ flex: 1, paddingTop: insets.top + 20 }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Analytics</Text>
+          <Text style={styles.headerSubtitle}>Your light exposure journey</Text>
         </View>
 
         <ScrollView
-          className="flex-1 px-6"
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 24, paddingBottom: insets.bottom + 40 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
         >
-          {/* Summary Stats */}
-          <Animated.View
-            entering={FadeInDown.delay(100).duration(400)}
-            className="flex-row gap-3 mb-6"
-          >
-            {/* Current Streak */}
-            <StatCard
-              icon={Flame}
-              iconColor="#FF6B35"
-              iconBgColor="rgba(255, 107, 53, 0.15)"
-              label="Streak"
-              value={currentStreak}
-              subtitle="DAYS"
-              variant="primary"
-            />
+          {/* Main Chart Card */}
+          <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>This Week</Text>
+              <Text style={styles.cardValue}>{Math.round(totalMinutesThisWeek)} <Text style={styles.cardUnit}>mins</Text></Text>
+            </View>
 
-            <StatCard
-              icon={Trophy}
-              iconColor="#FFB347"
-              iconBgColor="rgba(255, 179, 71, 0.15)"
-              label="Best"
-              value={longestStreak}
-              subtitle="DAYS"
-              variant="secondary"
-            />
-          </Animated.View>
+            <View style={styles.chartContainer}>
+              {last7Days.map((day, index) => {
+                const heightPercent = (day.minutes / maxMinutes) * 100;
+                const isToday = index === 6;
 
-          {/* Weekly Chart */}
-          <Animated.View entering={FadeInDown.delay(200).duration(400)} className="mb-6">
-            <Text
-              className="text-lumis-sunrise/40 text-[10px] uppercase tracking-[3px] mb-md px-1"
-              style={{ fontFamily: 'Outfit_700Bold' }}
-            >
-              THIS WEEK
-            </Text>
-            <GlassCard variant="elevated">
-              {/* Chart */}
-              <View className="flex-row items-end justify-between h-40 mb-4">
-                {last7Days.map((day, index) => {
-                  const barHeight = maxMinutes > 0 ? (day.minutes / maxMinutes) * 120 : 0;
-                  const isToday = index === 6;
-
-                  return (
-                    <View key={day.date} className="items-center flex-1">
-                      {/* Bar */}
-                      <View className="w-8 justify-end" style={{ height: 120 }}>
-                        {/* Goal line */}
-                        <View
-                          className="absolute w-full border-t border-dashed border-lumis-golden/30"
-                          style={{ bottom: (dailyGoalMinutes / maxMinutes) * 120 }}
-                        />
-                        {/* Bar fill */}
-                        <LinearGradient
-                          colors={
-                            day.completed
-                              ? ['#FFE4B5', '#FFB347', '#FF8C00']
-                              : ['#0F3460', '#16213E']
+                return (
+                  <View key={day.date} style={styles.barColumn}>
+                    <View style={styles.barTrack}>
+                      <LinearGradient
+                        colors={day.completed ? ['#FFB347', '#FF8C00'] : ['#A0C4FF', '#4A90D9']}
+                        style={[
+                          styles.barFill,
+                          {
+                            height: `${Math.max(heightPercent, 8)}%`,
+                            opacity: day.minutes > 0 ? 1 : 0.3
                           }
-                          style={{
-                            height: Math.max(barHeight, 4),
-                            borderRadius: 4,
-                            width: '100%',
-                          }}
-                        />
-                      </View>
-                      {/* Day label */}
-                      <Text
-                        className={`text-xs mt-2 ${isToday ? 'text-lumis-golden' : 'text-lumis-sunrise/50'}`}
-                        style={{ fontFamily: isToday ? 'Outfit_600SemiBold' : 'Outfit_400Regular' }}
-                      >
-                        {day.dayName}
-                      </Text>
+                        ]}
+                      />
                     </View>
-                  );
-                })}
-              </View>
-
-              {/* Week stats */}
-              <View className="flex-row justify-between pt-4 border-t border-lumis-dusk/30">
-                <View>
-                  <Text
-                    className="text-lumis-sunrise/50 text-sm"
-                    style={{ fontFamily: 'Outfit_400Regular' }}
-                  >
-                    Total light time
-                  </Text>
-                  <Text
-                    className="text-lumis-dawn text-xl"
-                    style={{ fontFamily: 'Outfit_600SemiBold' }}
-                  >
-                    {totalMinutesThisWeek.toFixed(0)} min
-                  </Text>
-                </View>
-                <View className="items-end">
-                  <Text
-                    className="text-lumis-sunrise/50 text-sm"
-                    style={{ fontFamily: 'Outfit_400Regular' }}
-                  >
-                    Days completed
-                  </Text>
-                  <Text
-                    className="text-lumis-golden text-xl"
-                    style={{ fontFamily: 'Outfit_600SemiBold' }}
-                  >
-                    {completedDaysThisWeek}/7
-                  </Text>
-                </View>
-              </View>
-            </GlassCard>
+                    <Text style={[styles.dayLabel, isToday && styles.todayLabel]}>
+                      {day.dayName}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </Animated.View>
 
-          {/* Lifetime Stats */}
-          <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-lg">
-            <Text
-              className="text-lumis-sunrise/40 text-[10px] uppercase tracking-[3px] mb-md px-1"
-              style={{ fontFamily: 'Outfit_700Bold' }}
-            >
-              ALL TIME
-            </Text>
-            <GlassCard variant="default">
-              <View className="flex-row items-center mb-lg">
-                <View className="w-12 h-12 rounded-2xl bg-lumis-golden/10 items-center justify-center mr-4">
-                  <Calendar size={24} color="#FFB347" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-lumis-sunrise/40 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_700Bold' }}>Earned Days</Text>
-                  <Text
-                    className="text-3xl text-lumis-dawn"
-                    style={{ fontFamily: 'Syne_700Bold' }}
-                  >
-                    {totalDaysCompleted}
-                  </Text>
-                </View>
-              </View>
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
+            <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.statCard}>
+              <StatBox
+                icon={Flame}
+                color="#FF6B35"
+                value={currentStreak}
+                label="Current Streak"
+              />
+            </Animated.View>
 
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 rounded-2xl bg-lumis-accent/10 items-center justify-center mr-4">
-                  <Sun size={24} color="#8B5CF6" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-lumis-sunrise/40 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_700Bold' }}>Sun Absorbed</Text>
-                  <Text
-                    className="text-3xl text-lumis-dawn"
-                    style={{ fontFamily: 'Syne_700Bold' }}
-                  >
-                    {(progressHistory.reduce((sum, p) => sum + p.lightMinutes, 0)).toFixed(0)} min
-                  </Text>
-                </View>
+            <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.statCard}>
+              <StatBox
+                icon={Trophy}
+                color="#FFB347"
+                value={longestStreak}
+                label="Longest Streak"
+              />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.statCard}>
+              <StatBox
+                icon={Clock}
+                color="#4A90D9"
+                value={Math.round(totalHoursInSunlight)}
+                unit="hrs"
+                label="Total Time"
+              />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(350).duration(400)} style={styles.statCard}>
+              <StatBox
+                icon={Calendar}
+                color="#8B5CF6"
+                value={totalDaysCompleted}
+                label="Total Days"
+              />
+            </Animated.View>
+          </View>
+
+          {/* Goals Card */}
+          <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Daily Goal</Text>
+              <Pressable>
+                <Text style={styles.editLink}>Edit</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.goalRow}>
+              <View style={styles.goalIconContainer}>
+                <Sun size={24} color="#FF8C00" />
               </View>
-            </GlassCard>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.goalLabel}>Morning Light</Text>
+                <Text style={styles.goalSubtext}>{dailyGoalMinutes} minutes before 10 AM</Text>
+              </View>
+              <View style={styles.goalValue}>
+                <Text style={styles.goalValueText}>{Math.round((progressHistory[progressHistory.length - 1]?.lightMinutes || 0) / dailyGoalMinutes * 100)}%</Text>
+              </View>
+            </View>
+
+            <View style={styles.progressBarBg}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${Math.min((progressHistory[progressHistory.length - 1]?.lightMinutes || 0) / dailyGoalMinutes * 100, 100)}%` }
+                ]}
+              />
+            </View>
           </Animated.View>
 
-          {/* Insight */}
-          <Animated.View entering={FadeInDown.delay(400).springify()}>
-            <GlassCard variant="hero" glow glowColor="#8B5CF6">
-              <View className="flex-row items-center mb-3">
-                <TrendingUp size={20} color="#8B5CF6" />
-                <Text
-                  className="text-lumis-dawn text-base ml-2"
-                  style={{ fontFamily: 'Outfit_700Bold' }}
-                >
-                  Your Edge
-                </Text>
-              </View>
-              <Text
-                className="text-lumis-sunrise/70 text-base leading-relaxed"
-                style={{ fontFamily: 'Outfit_400Regular' }}
-              >
-                {currentStreak >= 7
-                  ? "Peak alignment. Your sleep quality is likely at its best right now."
-                  : currentStreak >= 3
-                    ? "Momentum building. One more sunrise cements this habit."
-                    : "The first 3 days are the reset. Push through — the energy shift is coming."}
-              </Text>
-            </GlassCard>
-          </Animated.View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
+    color: '#1A1A2E',
+    opacity: 0.6,
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+    opacity: 0.8,
+  },
+  cardValue: {
+    fontSize: 24,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  cardUnit: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+    opacity: 0.5,
+  },
+  chartContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    height: 160,
+    alignItems: 'flex-end',
+  },
+  barColumn: {
+    alignItems: 'center',
+    flex: 1,
+    height: '100%',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  barTrack: {
+    width: 8,
+    height: '85%',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 4,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  barFill: {
+    width: '100%',
+    borderRadius: 4,
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+    opacity: 0.4,
+  },
+  todayLabel: {
+    color: '#FF8C00',
+    opacity: 1,
+    fontFamily: 'Outfit_700Bold',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  statCard: {
+    width: (width - 48 - 12) / 2, // 2 columns
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 20,
+    padding: 16,
+  },
+  statBox: {
+    gap: 12,
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  statUnit: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    opacity: 0.6,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+    opacity: 0.5,
+  },
+  editLink: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#4A90D9',
+  },
+  goalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  goalIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF8E7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalLabel: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  goalSubtext: {
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+    color: '#1A1A2E',
+    opacity: 0.6,
+  },
+  goalValue: {
+    alignItems: 'flex-end',
+  },
+  goalValueText: {
+    fontSize: 18,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#FF8C00',
+    borderRadius: 3,
+  },
+});

@@ -35,7 +35,7 @@ export default function IndexScreen() {
     // Check if user is authenticated and has completed onboarding
     if (isAuthenticated && hasCompletedOnboarding) {
       const timer = setTimeout(() => {
-        router.replace('/dashboard');
+        router.replace('/(tabs)');
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -88,7 +88,7 @@ export default function IndexScreen() {
   // Show loading state while checking auth
   if (isAuthenticated) {
     return (
-      <View className="flex-1 bg-lumis-night items-center justify-center">
+      <View style={{ flex: 1, backgroundColor: '#87CEEB', alignItems: 'center', justifyContent: 'center' }}>
         <AnimatedSun size={120} />
       </View>
     );
@@ -97,7 +97,8 @@ export default function IndexScreen() {
   return (
     <View className="flex-1">
       <LinearGradient
-        colors={['#1A1A2E', '#16213E', '#0F3460']}
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
         style={{ flex: 1 }}
       >
         <View
@@ -112,14 +113,14 @@ export default function IndexScreen() {
           {/* Text Content */}
           <View className="items-center space-y-4">
             <Animated.Text
-              style={[titleStyle, { fontFamily: 'Outfit_700Bold' }]}
-              className="text-5xl text-lumis-dawn text-center"
+              style={[titleStyle, { fontFamily: 'Outfit_700Bold', color: '#1A1A2E' }]}
+              className="text-5xl text-center"
             >
               LUMIS
             </Animated.Text>
             <Animated.Text
-              style={[subtitleStyle, { fontFamily: 'Outfit_400Regular' }]}
-              className="text-lg text-lumis-sunrise text-center opacity-80"
+              style={[subtitleStyle, { fontFamily: 'Outfit_400Regular', color: '#1A1A2E' }]}
+              className="text-lg text-center opacity-80"
             >
               Earn your screen time{'\n'}with daylight
             </Animated.Text>
@@ -165,10 +166,10 @@ export default function IndexScreen() {
                 className="w-full mt-4 py-4"
               >
                 <Text
-                  className="text-lumis-golden text-center text-base"
-                  style={{ fontFamily: 'Outfit_500Medium' }}
+                  className="text-center text-base"
+                  style={{ fontFamily: 'Outfit_500Medium', color: '#1A1A2E' }}
                 >
-                  Already have an account? <Text style={{ fontFamily: 'Outfit_600SemiBold' }}>Sign In</Text>
+                  Already have an account? <Text style={{ fontFamily: 'Outfit_600SemiBold', color: '#FF8C00' }}>Sign In</Text>
                 </Text>
               </Pressable>
             </Animated.View>

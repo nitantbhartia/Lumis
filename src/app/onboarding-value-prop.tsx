@@ -40,7 +40,8 @@ export default function OnboardingValuePropScreen() {
   return (
     <View className="flex-1">
       <LinearGradient
-        colors={['#1A1A2E', '#16213E', '#0F3460']}
+        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
+        locations={[0, 0.3, 0.7, 1]}
         style={{ flex: 1 }}
       >
         <View
@@ -50,14 +51,12 @@ export default function OnboardingValuePropScreen() {
           {/* Header */}
           <View>
             <Text
-              className="text-4xl text-lumis-dawn mb-2"
-              style={{ fontFamily: 'Outfit_700Bold' }}
+              style={{ fontSize: 36, fontFamily: 'Outfit_700Bold', color: '#1A1A2E', marginBottom: 8 }}
             >
               How it works
             </Text>
             <Text
-              className="text-lg text-lumis-sunrise"
-              style={{ fontFamily: 'Outfit_400Regular' }}
+              style={{ fontSize: 18, fontFamily: 'Outfit_400Regular', color: '#333' }}
             >
               The first 30 minutes of light decide your whole day.
             </Text>
@@ -71,30 +70,28 @@ export default function OnboardingValuePropScreen() {
                 <Animated.View
                   key={index}
                   entering={FadeInDown.delay(index * 200).springify()}
-                  className="flex-row items-start gap-4"
+                  style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}
                 >
                   <View
                     style={{
                       width: 48,
                       height: 48,
                       borderRadius: 12,
-                      backgroundColor: item.color + '20',
+                      backgroundColor: 'rgba(255, 255, 255, 0.5)',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
                     <Icon size={24} color={item.color} />
                   </View>
-                  <View className="flex-1">
+                  <View style={{ flex: 1 }}>
                     <Text
-                      className="text-xl text-lumis-dawn mb-1"
-                      style={{ fontFamily: 'Outfit_600SemiBold' }}
+                      style={{ fontSize: 20, fontFamily: 'Outfit_600SemiBold', color: '#1A1A2E', marginBottom: 4 }}
                     >
                       {item.title}
                     </Text>
                     <Text
-                      className="text-base text-lumis-sunrise"
-                      style={{ fontFamily: 'Outfit_400Regular' }}
+                      style={{ fontSize: 15, fontFamily: 'Outfit_400Regular', color: '#333' }}
                     >
                       {item.description}
                     </Text>
