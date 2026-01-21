@@ -5,6 +5,7 @@ import { X, LogOut, ChevronRight, Moon, Sun, Bell } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/lib/state/auth-store';
+import { formatFirstName } from '@/lib/utils/name-utils';
 
 const { width } = Dimensions.get('window');
 
@@ -84,10 +85,10 @@ export default function UserSettingsModal({ visible, onClose }: UserSettingsModa
                     <View style={styles.profileSection}>
                         <View style={styles.avatarLarge}>
                             <Text style={styles.avatarTextLarge}>
-                                {userName ? userName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'NB'}
+                                {formatFirstName(userName || 'Explorer').charAt(0).toUpperCase()}
                             </Text>
                         </View>
-                        <Text style={styles.profileName}>{userName || 'Nitant Bhartia'}</Text>
+                        <Text style={styles.profileName}>{formatFirstName(userName || 'Explorer')}</Text>
                         <Text style={styles.profileMeta}>Basic Plan</Text>
                     </View>
 

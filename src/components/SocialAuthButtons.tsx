@@ -1,5 +1,6 @@
 import { View, Text, Pressable, Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthStore } from '@/lib/state/auth-store';
 import { useState } from 'react';
 import Svg, { Path } from 'react-native-svg';
@@ -19,13 +20,29 @@ export function SocialAuthButtons({ onSuccess, onError }: SocialAuthButtonsProps
     setIsLoading('apple');
 
     try {
-      // Since expo-apple-authentication is not installed,
-      // we use mock mode which simulates the Apple sign-in flow
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Error', 'Apple Sign In is not available on this device');
+        setIsLoading(null);
+        return;
+      }
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      const fullName = credential.fullName?.givenName
+        ? `${credential.fullName.givenName} ${credential.fullName.familyName || ''}`.trim()
+        : 'Apple User';
+
       const result = await socialLogin({
         provider: 'apple',
-        idToken: 'mock_apple_token',
-        email: 'user@icloud.com',
-        name: 'Apple User',
+        idToken: credential.identityToken!,
+        email: credential.email,
+        name: fullName,
       });
 
       setIsLoading(null);
@@ -35,9 +52,11 @@ export function SocialAuthButtons({ onSuccess, onError }: SocialAuthButtonsProps
       } else {
         onError?.(result.error || 'Apple sign in failed');
       }
-    } catch {
+    } catch (e: any) {
       setIsLoading(null);
-      onError?.('Apple sign in failed');
+      if (e.code !== 'ERR_CANCELED') {
+        onError?.('Apple sign in failed');
+      }
     }
   };
 

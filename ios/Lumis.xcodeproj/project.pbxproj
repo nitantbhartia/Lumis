@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -14,29 +14,83 @@
 		77A9AB384511D67A6FCECBDB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = EB17D468FA88FA5C11C8660C /* PrivacyInfo.xcprivacy */; };
 		91B1E38234C647D89CA67375 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D95B93212B74137BA0139FD /* ManagedSettings.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		92C61F6CDE11C216361CE294 /* libPods-Lumis.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 979B9E512843FCDD6945C829 /* libPods-Lumis.a */; };
+		B6D3AF382F21869400799C66 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D95B93212B74137BA0139FD /* ManagedSettings.framework */; };
+		B6D3AF3A2F21869400799C66 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6D3AF392F21869400799C66 /* ManagedSettingsUI.framework */; };
+		B6D3AF422F21869400799C66 /* com.nitant.lumis.ShieldConfiguration.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6D3AF372F21869300799C66 /* com.nitant.lumis.ShieldConfiguration.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		DF88E020E10E428CA455BEB5 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2DB80453133B4E48BEA18DBC /* FamilyControls.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B6D3AF402F21869400799C66 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B6D3AF362F21869300799C66;
+			remoteInfo = com.nitant.lumis.ShieldConfiguration;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B6D3AF472F21869400799C66 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B6D3AF422F21869400799C66 /* com.nitant.lumis.ShieldConfiguration.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* Lumis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lumis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Lumis/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Lumis/Info.plist; sourceTree = "<group>"; };
-		1D95B93212B74137BA0139FD /* ManagedSettings.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
-		2DB80453133B4E48BEA18DBC /* FamilyControls.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		1D95B93212B74137BA0139FD /* ManagedSettings.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		2DB80453133B4E48BEA18DBC /* FamilyControls.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		614021E6CD01C51F3F6BE4A7 /* Pods-Lumis.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Lumis.release.xcconfig"; path = "Target Support Files/Pods-Lumis/Pods-Lumis.release.xcconfig"; sourceTree = "<group>"; };
 		979B9E512843FCDD6945C829 /* libPods-Lumis.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Lumis.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Lumis/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B15E82549CD74F04BD137539 /* DeviceActivity.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		B15E82549CD74F04BD137539 /* DeviceActivity.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		B6D3AF372F21869300799C66 /* com.nitant.lumis.ShieldConfiguration.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = com.nitant.lumis.ShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6D3AF392F21869400799C66 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		BFCC72C39C12B7F74621EA65 /* Pods-Lumis.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Lumis.debug.xcconfig"; path = "Target Support Files/Pods-Lumis/Pods-Lumis.debug.xcconfig"; sourceTree = "<group>"; };
 		D97CF3D1B81EBF14DD5C7B4E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Lumis/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		EB17D468FA88FA5C11C8660C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Lumis/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		EB17D468FA88FA5C11C8660C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Lumis/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Lumis/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Lumis-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Lumis-Bridging-Header.h"; path = "Lumis/Lumis-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B6D3AF432F21869400799C66 /* Exceptions for "com.nitant.lumis.ShieldConfiguration" folder in "com.nitant.lumis.ShieldConfiguration" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B6D3AF362F21869300799C66 /* com.nitant.lumis.ShieldConfiguration */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B6D3AF3B2F21869400799C66 /* com.nitant.lumis.ShieldConfiguration */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B6D3AF432F21869400799C66 /* Exceptions for "com.nitant.lumis.ShieldConfiguration" folder in "com.nitant.lumis.ShieldConfiguration" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = com.nitant.lumis.ShieldConfiguration;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
@@ -47,6 +101,15 @@
 				DF88E020E10E428CA455BEB5 /* FamilyControls.framework in Frameworks */,
 				67C4CB163B2342A09A8907C6 /* DeviceActivity.framework in Frameworks */,
 				92C61F6CDE11C216361CE294 /* libPods-Lumis.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6D3AF342F21869300799C66 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B6D3AF382F21869400799C66 /* ManagedSettings.framework in Frameworks */,
+				B6D3AF3A2F21869400799C66 /* ManagedSettingsUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +138,7 @@
 				2DB80453133B4E48BEA18DBC /* FamilyControls.framework */,
 				B15E82549CD74F04BD137539 /* DeviceActivity.framework */,
 				979B9E512843FCDD6945C829 /* libPods-Lumis.a */,
+				B6D3AF392F21869400799C66 /* ManagedSettingsUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -93,7 +157,6 @@
 				BFCC72C39C12B7F74621EA65 /* Pods-Lumis.debug.xcconfig */,
 				614021E6CD01C51F3F6BE4A7 /* Pods-Lumis.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -109,6 +172,7 @@
 			children = (
 				13B07FAE1A68108700A75B9A /* Lumis */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
+				B6D3AF3B2F21869400799C66 /* com.nitant.lumis.ShieldConfiguration */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				6BF7FA6AAE95413E52FA555D /* Pods */,
@@ -123,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* Lumis.app */,
+				B6D3AF372F21869300799C66 /* com.nitant.lumis.ShieldConfiguration.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -159,15 +224,37 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				DBA7AF365E000753D25D7B8A /* [CP] Embed Pods Frameworks */,
+				B6D3AF472F21869400799C66 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B6D3AF412F21869400799C66 /* PBXTargetDependency */,
 			);
 			name = Lumis;
 			productName = Lumis;
 			productReference = 13B07F961A680F5B00A75B9A /* Lumis.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B6D3AF362F21869300799C66 /* com.nitant.lumis.ShieldConfiguration */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B6D3AF442F21869400799C66 /* Build configuration list for PBXNativeTarget "com.nitant.lumis.ShieldConfiguration" */;
+			buildPhases = (
+				B6D3AF332F21869300799C66 /* Sources */,
+				B6D3AF342F21869300799C66 /* Frameworks */,
+				B6D3AF352F21869300799C66 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B6D3AF3B2F21869400799C66 /* com.nitant.lumis.ShieldConfiguration */,
+			);
+			name = com.nitant.lumis.ShieldConfiguration;
+			productName = com.nitant.lumis.ShieldConfiguration;
+			productReference = B6D3AF372F21869300799C66 /* com.nitant.lumis.ShieldConfiguration.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -175,12 +262,14 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						DevelopmentTeam = 3432PCL99X;
 						LastSwiftMigration = 1250;
-						ProvisioningStyle = Automatic;
+					};
+					B6D3AF362F21869300799C66 = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -198,6 +287,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* Lumis */,
+				B6D3AF362F21869300799C66 /* com.nitant.lumis.ShieldConfiguration */,
 			);
 		};
 /* End PBXProject section */
@@ -211,6 +301,13 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				77A9AB384511D67A6FCECBDB /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6D3AF352F21869300799C66 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -369,7 +466,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B6D3AF332F21869300799C66 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B6D3AF412F21869400799C66 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B6D3AF362F21869300799C66 /* com.nitant.lumis.ShieldConfiguration */;
+			targetProxy = B6D3AF402F21869400799C66 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -403,6 +515,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.nitant.lumis;
 				PRODUCT_NAME = Lumis;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Lumis/Lumis-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -437,6 +550,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.nitant.lumis;
 				PRODUCT_NAME = Lumis;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Lumis/Lumis-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -568,6 +682,101 @@
 			};
 			name = Release;
 		};
+		B6D3AF452F21869400799C66 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_ENTITLEMENTS = com.nitant.lumis.ShieldConfiguration/com_nitant_lumis_ShieldConfiguration.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 3432PCL99X;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = com.nitant.lumis.ShieldConfiguration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = com.nitant.lumis.ShieldConfiguration;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nitant.lumis.com-nitant-lumis-ShieldConfiguration";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B6D3AF462F21869400799C66 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_ENTITLEMENTS = com.nitant.lumis.ShieldConfiguration/com_nitant_lumis_ShieldConfiguration.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 3432PCL99X;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = com.nitant.lumis.ShieldConfiguration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = com.nitant.lumis.ShieldConfiguration;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_FAST_MATH = YES;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nitant.lumis.com-nitant-lumis-ShieldConfiguration";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -585,6 +794,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B6D3AF442F21869400799C66 /* Build configuration list for PBXNativeTarget "com.nitant.lumis.ShieldConfiguration" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6D3AF452F21869400799C66 /* Debug */,
+				B6D3AF462F21869400799C66 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

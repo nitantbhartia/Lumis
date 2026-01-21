@@ -5,7 +5,7 @@ import { X, Lock, Flame } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { purchasePackage, getOfferings } from '@/lib/revenuecat';
+import { purchasePackage, getOfferings, REVENUECAT_OFFERINGS } from '@/lib/revenuecat';
 import { PurchasesPackage } from 'react-native-purchases';
 
 interface EmergencyUnlockModalProps {
@@ -31,11 +31,16 @@ export default function EmergencyUnlockModal({ visible, onClose, onSuccess }: Em
 
     const loadOffering = async () => {
         const current = await getOfferings();
-        // In a real implementation we would look for the specific package
-        // e.g. setOffering(current?.availablePackages.find(p => p.identifier === 'emergency_flare'));
-        // For development/mock, we just grab first unless none exists.
-        if (current && current.availablePackages.length > 0) {
-            setOffering(current.availablePackages[0]);
+        if (current) {
+            const flarePackage = current.availablePackages.find(
+                p => p.identifier === REVENUECAT_OFFERINGS.EMERGENCY_FLARE
+            );
+            if (flarePackage) {
+                setOffering(flarePackage);
+            } else if (current.availablePackages.length > 0) {
+                // Fallback to first package if specific one not found but packages exist
+                setOffering(current.availablePackages[0]);
+            }
         }
     };
 
@@ -53,17 +58,8 @@ export default function EmergencyUnlockModal({ visible, onClose, onSuccess }: Em
     const handlePurchase = async () => {
         setLoading(true);
         if (!offering) {
-            // MOCK PURCHASE for development
-            setTimeout(() => {
-                setLoading(false);
-                addEmergencyFlares(1);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                // Auto-use immediately after buying?
-                // For better UX, let's just make them available and use one.
-                consumeFlare();
-                onSuccess();
-                onClose();
-            }, 1500);
+            setLoading(false);
+            Alert.alert('Error', 'No purchase options available at this time. Please try again later.');
             return;
         }
 

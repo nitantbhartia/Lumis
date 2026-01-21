@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 // TODO: Replace with your actual RevenueCat API Keys
 const API_KEYS = {
-    ios: 'appl_REPLACE_WITH_YOUR_KEY',
+    ios: 'appl_qphLWsbVTRWkKqoEnzPVFlmSAFl',
     android: 'goog_REPLACE_WITH_YOUR_KEY',
 };
 
@@ -12,7 +12,7 @@ export const REVENUECAT_ENTITLEMENTS = {
 };
 
 export const REVENUECAT_OFFERINGS = {
-    EMERGENCY_FLARE: 'emergency_flare_ref',
+    EMERGENCY_FLARE: 'emergency_flare',
 };
 
 export const initRevenueCat = async () => {

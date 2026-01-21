@@ -1,5 +1,5 @@
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import { Syne_700Bold, Syne_800ExtraBold } from '@expo-google-fonts/syne';
 import { useEffect } from 'react';
+import { Linking } from 'react-native';
 import { initRevenueCat } from '@/lib/revenuecat';
 
 export const unstable_settings = {
@@ -31,6 +32,32 @@ const LumisDarkTheme = {
 };
 
 function RootLayoutNav() {
+  const router = useRouter();
+
+  // Handle deep links from shield button
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      console.log('[DeepLink] Received:', event.url);
+      if (event.url.includes('start-session')) {
+        // User tapped "Open Lumis" from the shield - go directly to tracking
+        router.push('/tracking');
+      }
+    };
+
+    // Listen for incoming deep links
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Check if app was opened via deep link
+    Linking.getInitialURL().then((url) => {
+      if (url && url.includes('start-session')) {
+        console.log('[DeepLink] Initial URL:', url);
+        router.push('/tracking');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
   return (
     <ThemeProvider value={LumisDarkTheme}>
       <Stack

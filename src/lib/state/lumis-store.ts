@@ -131,6 +131,14 @@ interface LumisState {
   overachieverDaysCount: number;
   daysWithoutEmergencyUnlock: number;
   hasHadStreakBefore: boolean;
+  hasSeenLuxPrimer: boolean;
+  setHasSeenLuxPrimer: (value: boolean) => void;
+
+  // Passive Verification Analytics
+  passiveVerificationSuccessCount: number;
+  passiveVerificationFailCount: number;
+  incrementPassiveSuccess: () => void;
+  incrementPassiveFail: () => void;
 
   // New Onboarding Data
   sunlightFrequency: 'daily' | 'few_times' | 'once_a_week' | 'rarely' | null;
@@ -153,6 +161,25 @@ interface LumisState {
   activityHistory: ActivitySession[];
   lastCompletedSession: ActivitySession | null;
   addActivityToHistory: (session: ActivitySession) => void;
+
+  // Active Session (Timer Persistence)
+  activeSession: {
+    startTime: string | null;
+    accumulatedSeconds: number;
+    goalSeconds: number;
+    lastSaveTime: string | null;
+    isActive: boolean;
+  };
+  startActiveSession: (goalSeconds?: number) => void;
+  updateActiveSession: (additionalSeconds: number) => void;
+  completeActiveSession: () => void;
+  resumeActiveSession: () => { elapsedSeconds: number; remainingSeconds: number } | null;
+
+  // Morning Shield Scheduling
+  scheduledWakeTime: string | null; // "06:30"
+  setScheduledWakeTime: (time: string | null) => void;
+  isShieldScheduled: boolean;
+  setIsShieldScheduled: (value: boolean) => void;
 }
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -173,6 +200,14 @@ export const useLumisStore = create<LumisState>()(
       // Onboarding
       hasCompletedOnboarding: false,
       setHasCompletedOnboarding: (value) => set({ hasCompletedOnboarding: value }),
+      hasSeenLuxPrimer: false,
+      setHasSeenLuxPrimer: (value) => set({ hasSeenLuxPrimer: value }),
+
+      // Passive Verification Analytics
+      passiveVerificationSuccessCount: 0,
+      passiveVerificationFailCount: 0,
+      incrementPassiveSuccess: () => set((s) => ({ passiveVerificationSuccessCount: s.passiveVerificationSuccessCount + 1 })),
+      incrementPassiveFail: () => set((s) => ({ passiveVerificationFailCount: s.passiveVerificationFailCount + 1 })),
 
       // Calibration
       calibration: {
@@ -505,6 +540,55 @@ export const useLumisStore = create<LumisState>()(
       emergencyFlares: 0,
       addEmergencyFlares: (count) => set((s) => ({ emergencyFlares: s.emergencyFlares + count })),
       consumeEmergencyFlare: () => set((s) => ({ emergencyFlares: Math.max(0, s.emergencyFlares - 1) })),
+
+      // Active Session (Timer Persistence)
+      activeSession: {
+        startTime: null,
+        accumulatedSeconds: 0,
+        goalSeconds: 960, // 16 minutes default
+        lastSaveTime: null,
+        isActive: false,
+      },
+      startActiveSession: (goalSeconds = 960) => set({
+        activeSession: {
+          startTime: new Date().toISOString(),
+          accumulatedSeconds: 0,
+          goalSeconds,
+          lastSaveTime: new Date().toISOString(),
+          isActive: true,
+        }
+      }),
+      updateActiveSession: (additionalSeconds) => set((s) => ({
+        activeSession: {
+          ...s.activeSession,
+          accumulatedSeconds: s.activeSession.accumulatedSeconds + additionalSeconds,
+          lastSaveTime: new Date().toISOString(),
+        }
+      })),
+      completeActiveSession: () => set({
+        activeSession: {
+          startTime: null,
+          accumulatedSeconds: 0,
+          goalSeconds: 960,
+          lastSaveTime: null,
+          isActive: false,
+        }
+      }),
+      resumeActiveSession: () => {
+        const state = get();
+        if (!state.activeSession.isActive || !state.activeSession.startTime) {
+          return null;
+        }
+        const elapsedSeconds = state.activeSession.accumulatedSeconds;
+        const remainingSeconds = Math.max(0, state.activeSession.goalSeconds - elapsedSeconds);
+        return { elapsedSeconds, remainingSeconds };
+      },
+
+      // Morning Shield Scheduling
+      scheduledWakeTime: null,
+      setScheduledWakeTime: (time) => set({ scheduledWakeTime: time }),
+      isShieldScheduled: false,
+      setIsShieldScheduled: (value) => set({ isShieldScheduled: value }),
     }),
     {
       name: 'lumis-storage',
@@ -534,6 +618,12 @@ export const useLumisStore = create<LumisState>()(
         emergencyFlares: state.emergencyFlares,
         activityHistory: state.activityHistory,
         lastCompletedSession: state.lastCompletedSession,
+        activeSession: state.activeSession,
+        scheduledWakeTime: state.scheduledWakeTime,
+        isShieldScheduled: state.isShieldScheduled,
+        hasSeenLuxPrimer: state.hasSeenLuxPrimer,
+        passiveVerificationSuccessCount: state.passiveVerificationSuccessCount,
+        passiveVerificationFailCount: state.passiveVerificationFailCount,
       }),
     }
   )

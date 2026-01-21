@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Apple } from 'lucide-react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path, G, Circle } from 'react-native-svg';
 import { useAuthStore } from '@/lib/state/auth-store';
 
@@ -38,17 +39,40 @@ export default function OnboardingAuthScreen() {
     setIsLoading(true);
 
     try {
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        alert('Apple Sign In is not available on this device');
+        setIsLoading(false);
+        return;
+      }
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      const fullName = credential.fullName?.givenName
+        ? `${credential.fullName.givenName} ${credential.fullName.familyName || ''}`.trim()
+        : 'Apple User';
+
       const result = await socialLogin({
         provider: 'apple',
-        idToken: 'mock_token_' + Date.now(),
-        email: 'user@icloud.com',
-        name: 'Apple User',
+        idToken: credential.identityToken!,
+        email: credential.email,
+        name: fullName,
       });
 
       if (result.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setUserName('Apple User');
+        setUserName(fullName);
         router.push('/onboarding-success');
+      }
+    } catch (e: any) {
+      if (e.code !== 'ERR_CANCELED') {
+        console.error('Apple Sign In Error:', e);
+        alert('Failed to sign in with Apple. Please try again.');
       }
     } finally {
       setIsLoading(false);

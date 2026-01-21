@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Dimensions } from 'react
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing, interpolate } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, withDelay, withRepeat, Easing, interpolate } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import {
   Info,
@@ -12,14 +12,28 @@ import {
   ChevronDown,
   CloudSun,
   Thermometer,
-  Droplets
+  Droplets,
+  Shield,
+  Lock,
+  Instagram,
+  Video,
+  Twitter,
+  Facebook,
+  Youtube,
+  MessageCircle,
+  Ghost,
+  Film
 } from 'lucide-react-native';
 import Svg, { Path, Circle, G, Text as SvgText } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
+import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
+import { unblockApps } from '@/lib/screen-time';
 import CalendarModal from '../components/CalendarModal';
 import EmergencyUnlockModal from '../components/EmergencyUnlockModal';
 import { AlertCircle } from 'lucide-react-native';
+import { formatFirstName } from '@/lib/utils/name-utils';
+import { useQuickLuxCheck } from '@/lib/hooks/useQuickLuxCheck';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,97 +49,109 @@ const WeatherGraphic = ({ condition }: { condition: string }) => {
   return <CloudSun size={24} color="#1A1A2E" />;
 };
 
-// Sun Arc Component with Expandable Weather
-const SunArc = React.memo(({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) => {
+// Daylight Bar Component with Live Tracker - Always visible
+const DaylightBar = React.memo(() => {
   const weather = useWeather();
-  const rotation = useSharedValue(0);
-  const heightValue = useSharedValue(0);
-  const opacityValue = useSharedValue(0);
+  const glowScale = useSharedValue(1);
+
+  // Calculate tracker position based on current time
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const sunriseMinutes = 6 * 60 + 49; // 6:49 AM
+  const sunsetMinutes = 17 * 60 + 10; // 5:10 PM
+  const dayLength = sunsetMinutes - sunriseMinutes;
+
+  // Progress from 0 (sunrise) to 1 (sunset)
+  let progress = (currentMinutes - sunriseMinutes) / dayLength;
+  progress = Math.max(0, Math.min(1, progress));
+
+  // Determine if it's daytime
+  const isDaytime = currentMinutes >= sunriseMinutes && currentMinutes <= sunsetMinutes;
 
   useEffect(() => {
-    rotation.value = withTiming(expanded ? 180 : 0, { duration: 300 });
-    heightValue.value = withTiming(expanded ? 100 : 0, { duration: 300, easing: Easing.inOut(Easing.ease) });
-    opacityValue.value = expanded
-      ? withDelay(100, withTiming(1, { duration: 200 }))
-      : withTiming(0, { duration: 200 });
-  }, [expanded]);
+    // Pulsing glow animation for the sun tracker
+    glowScale.value = withRepeat(
+      withTiming(1.3, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
 
-  const chevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: glowScale.value }],
+    opacity: interpolate(glowScale.value, [1, 1.3], [0.6, 0.2]),
   }));
 
-  const contentStyle = useAnimatedStyle(() => ({
-    height: heightValue.value,
-    opacity: opacityValue.value,
-    overflow: 'hidden',
-    marginTop: interpolate(heightValue.value, [0, 100], [0, 24]),
-  }));
+  // Track dimensions for the arc
+  const trackWidth = width - 48 - (28 * 2) - (12 * 2); // Container width - icons - gaps
+  const trackHeight = 40;
 
   return (
-    <View style={styles.sunArcContainer}>
-      {/* Chevron Toggle */}
-      <Pressable onPress={onToggle} style={styles.chevronContainer} hitSlop={10}>
-        <Animated.View style={chevronStyle}>
-          <ChevronDown size={24} color="rgba(0,0,0,0.1)" />
-        </Animated.View>
-      </Pressable>
-
-      <Svg width={width - 48} height={80} viewBox="0 0 300 80">
-        <Path
-          d="M 20 70 Q 150 -10 280 70"
-          stroke="#E0E0E0"
-          strokeWidth="2"
-          fill="none"
-          strokeDasharray="5,5"
-        />
-        <Circle cx="150" cy="25" r="8" fill="#FFB347" />
-        <G transform="translate(150, 65)">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Path
-              key={i}
-              d="M 0 -10 L 0 -18"
-              stroke="#1A1A2E"
-              strokeWidth="1"
-              transform={`rotate(${i * 45 - 112.5})`}
-            />
-          ))}
-          <Circle cx="0" cy="0" r="5" stroke="#1A1A2E" strokeWidth="1" fill="none" />
-        </G>
-      </Svg>
-
-      <View style={styles.sunTimesRow}>
-        <View style={styles.sunTimeItem}>
-          <Text style={styles.sunTimeLabel}>Sunrise</Text>
-          <Text style={styles.sunTimeValue}>6:49 <Text style={styles.sunTimeAmPm}>am</Text></Text>
+    <View style={styles.daylightContainer}>
+      {/* Main Daylight Bar */}
+      <View style={styles.daylightBarWrapper}>
+        {/* Sunrise Icon */}
+        <View style={styles.sunIconContainer}>
+          <Svg width={28} height={28} viewBox="0 0 24 24">
+            <Circle cx="12" cy="18" r="4" fill="#FFB347" />
+            <Path d="M12 2v4M12 18v4M4.22 10.22l2.83 2.83M16.95 13.05l2.83 2.83M2 18h4M18 18h4M4.22 25.78l2.83-2.83M16.95 22.95l2.83-2.83" stroke="#FFB347" strokeWidth="1.5" strokeLinecap="round" />
+            <Path d="M4 18h16" stroke="#E0E0E0" strokeWidth="1" />
+          </Svg>
+          <Text style={styles.sunTimeSmall}>6:49</Text>
         </View>
-        <Pressable style={styles.weatherItem} onPress={onToggle}>
-          <WeatherGraphic condition={weather.condition} />
-          <Text style={styles.weatherCondition}>{weather.condition}</Text>
-        </Pressable>
-        <View style={styles.sunTimeItem}>
-          <Text style={styles.sunTimeLabel}>Sunset</Text>
-          <Text style={styles.sunTimeValue}>5:09 <Text style={styles.sunTimeAmPm}>pm</Text></Text>
+
+        {/* Progress Arc Track */}
+        <View style={[styles.daylightTrack, { height: trackHeight, backgroundColor: 'transparent' }]}>
+          <Svg width="100%" height={trackHeight} style={{ position: 'absolute' }}>
+            {/* Subtle Arc Path - Increased visibility */}
+            <Path
+              d={`M 0 ${trackHeight - 5} Q ${trackWidth / 2} -10 ${trackWidth} ${trackHeight - 5}`}
+              stroke="rgba(255,179,71,0.3)"
+              strokeWidth="3"
+              fill="none"
+              strokeDasharray="4,6"
+            />
+
+            {/* Active Progress Path - Solid and more opaque */}
+            <Path
+              d={`M 0 ${trackHeight - 5} Q ${trackWidth / 2} -10 ${trackWidth} ${trackHeight - 5}`}
+              stroke="#FFB347"
+              strokeWidth="3"
+              fill="none"
+              strokeDasharray={`${progress * (trackWidth * 1.15)}, 1000`}
+              opacity={0.8}
+            />
+
+            {/* Sun Tracker along the arc - Exact quadratic formula */}
+            {isDaytime && (
+              <G transform={`translate(${progress * trackWidth}, ${(1 - progress) ** 2 * (trackHeight - 5) + 2 * (1 - progress) * progress * (-10) + progress ** 2 * (trackHeight - 5)})`}>
+                <Circle r="14" fill="rgba(255,179,71,0.5)" />
+                <Circle r="8" fill="#FFB347" />
+                <Circle r="4" fill="#FFF" />
+              </G>
+            )}
+          </Svg>
+        </View>
+
+        {/* Sunset Icon */}
+        <View style={styles.sunIconContainer}>
+          <Svg width={28} height={28} viewBox="0 0 24 24">
+            <Circle cx="12" cy="18" r="4" fill="#FF8C42" opacity={0.6} />
+            <Path d="M12 14v-4M4.22 10.22l2.83 2.83M16.95 13.05l2.83 2.83M2 18h4M18 18h4" stroke="#FF8C42" strokeWidth="1.5" strokeLinecap="round" opacity={0.6} />
+            <Path d="M4 18h16" stroke="#E0E0E0" strokeWidth="1" />
+          </Svg>
+          <Text style={styles.sunTimeSmall}>5:10</Text>
         </View>
       </View>
 
-      {/* Expanded Weather Data */}
-      <Animated.View style={[styles.expandedWeatherContainer, contentStyle]}>
-        <View style={styles.weatherBox}>
-          <CloudSun size={20} color="#FFB347" />
-          <Text style={styles.weatherBoxLabel}>UV Index</Text>
-          <Text style={styles.weatherBoxValue}>{weather.uvIndex}</Text>
-        </View>
-        <View style={styles.weatherBox}>
-          <Thermometer size={20} color="#6495ED" />
-          <Text style={styles.weatherBoxLabel}>Temp</Text>
-          <Text style={styles.weatherBoxValue}>{weather.temperature}°C</Text>
-        </View>
-        <View style={styles.weatherBox}>
-          <Droplets size={20} color="#4682B4" />
-          <Text style={styles.weatherBoxLabel}>Humidity</Text>
-          <Text style={styles.weatherBoxValue}>{weather.humidity}%</Text>
-        </View>
-      </Animated.View>
+  // Weather Data Row - Simplified and Cleaner
+      <View style={styles.weatherDataRow}>
+        <Text style={styles.weatherDataLabel}>{weather.condition}</Text>
+        <Text style={styles.weatherDataDividerDot}>•</Text>
+        <Text style={styles.weatherDataValueMinimal}>{weather.temperature}°</Text>
+        <Text style={styles.weatherDataDividerDot}>•</Text>
+        <Text style={styles.weatherDataValueMinimal}>UV {weather.uvIndex}</Text>
+      </View>
     </View>
   );
 });
@@ -138,26 +164,93 @@ export default function DashboardScreen() {
   const userName = useAuthStore((s) => s.userName);
   const currentStreak = useLumisStore((s) => s.currentStreak);
   const todayProgress = useLumisStore((s) => s.todayProgress);
+  const blockedApps = useLumisStore((s) => s.blockedApps);
+  const useEmergencyUnlock = useLumisStore((s) => s.useEmergencyUnlock);
   const dailyGoalMinutes = useLumisStore((s) => s.dailyGoalMinutes);
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showEmergencyUnlock, setShowEmergencyUnlock] = useState(false);
+  const [showMorningLightInfo, setShowMorningLightInfo] = useState(false);
+  const [isCheckingLux, setIsCheckingLux] = useState(false);
+
+  const { checkLux } = useQuickLuxCheck();
+  const incrementPassiveSuccess = useLumisStore((s) => s.incrementPassiveSuccess);
+  const incrementPassiveFail = useLumisStore((s) => s.incrementPassiveFail);
+  const [selectedBlockedApp, setSelectedBlockedApp] = useState<string | null>(null);
   const [peopleCount, setPeopleCount] = useState(142);
   const [isWeatherExpanded, setIsWeatherExpanded] = useState(false);
 
+  // Time-based greeting and CTA logic
+  const now = new Date();
+  const currentHour = now.getHours();
+  const sunsetHour = 17; // 5 PM
+  const sunriseHour = 6;
+
+  const { status } = useSmartEnvironment();
+  const isOutdoors = status === 'OUTDOORS';
+  const pulseOpacity = useSharedValue(0.5);
+
+  const getGreeting = () => {
+    if (currentHour >= 5 && currentHour < 12) return 'Good morning';
+    if (currentHour >= 12 && currentHour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const getCtaText = () => {
+    // After sunset or before sunrise: "See you in the morning"
+    if (currentHour >= sunsetHour || currentHour < sunriseHour) {
+      return 'See you in the morning';
+    }
+    // Morning (sunrise to noon): "Get your morning light"
+    if (currentHour >= sunriseHour && currentHour < 12) {
+      return 'Get your morning light';
+    }
+    // Afternoon: "Get your afternoon light"
+    return 'Get your afternoon light';
+  };
+
   useEffect(() => {
     // Make people count dynamic based on current hour/minute
-    const now = new Date();
-    const dynamicBase = 120 + (now.getHours() * 2) + Math.floor(now.getMinutes() / 5);
+    const dynamicBase = 120 + (currentHour * 2) + Math.floor(now.getMinutes() / 5);
     setPeopleCount(dynamicBase);
   }, []);
 
-  const initials = userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase() : 'NB';
+  const displayName = formatFirstName(userName || 'nitant bhartia');
+  const initials = displayName ? displayName.charAt(0).toUpperCase() : 'N';
 
-  const handleStartTracking = () => {
+  const handleStartTracking = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/(tabs)/shield');
+    setIsCheckingLux(true);
+
+    try {
+      // Quick passive lux check
+      const detectedLux = await checkLux();
+
+      // Smart routing based on lux level
+      if (detectedLux !== null) {
+        if (detectedLux >= 5000) {
+          // User is already in optimal sunlight - skip calibration
+          incrementPassiveSuccess();
+          router.push('/tracking');
+        } else if (detectedLux < 500) {
+          // User appears to be indoors - show gentle nudge
+          incrementPassiveFail();
+          router.push('/compass-lux?fallback=true');
+        } else {
+          // Borderline case - show standard calibration
+          router.push('/compass-lux');
+        }
+      } else {
+        // Sensor unavailable - show standard calibration
+        router.push('/compass-lux');
+      }
+    } catch (error) {
+      console.error('[Dashboard] Lux check error:', error);
+      router.push('/compass-lux');
+    } finally {
+      setIsCheckingLux(false);
+    }
   };
 
   const toggleWeather = () => {
@@ -166,6 +259,24 @@ export default function DashboardScreen() {
   }
 
   const progressPercent = Math.min((todayProgress.lightMinutes / dailyGoalMinutes) * 100, 100);
+  const isGoalMet = todayProgress.lightMinutes >= dailyGoalMinutes;
+
+  useEffect(() => {
+    if (isOutdoors) {
+      pulseOpacity.value = withRepeat(
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    } else {
+      pulseOpacity.value = withTiming(0, { duration: 300 });
+    }
+  }, [isOutdoors]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: pulseOpacity.value,
+    shadowOpacity: interpolate(pulseOpacity.value, [0.5, 1], [0.2, 0.6]),
+  }));
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
@@ -175,7 +286,7 @@ export default function DashboardScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={{ flex: 1, paddingTop: insets.top + 20 }}>
+      <View style={{ flex: 1, paddingTop: insets.top + 48 }}>
         {/* Header Section */}
         <View style={[styles.header, { zIndex: 99 }]}>
           <Pressable onPress={() => setShowSettings(true)} style={styles.profileRow}>
@@ -183,8 +294,8 @@ export default function DashboardScreen() {
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
             <View style={styles.welcomeTextContainer}>
-              <Text style={styles.welcomeText}>Good evening,</Text>
-              <Text style={styles.userNameText}>{userName || 'nitant bhartia'}</Text>
+              <Text style={styles.welcomeText}>{getGreeting()},</Text>
+              <Text style={styles.userNameText}>{displayName}</Text>
             </View>
           </Pressable>
           <Pressable
@@ -205,78 +316,185 @@ export default function DashboardScreen() {
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
         >
           {/* Community Stats */}
-          <View style={styles.communityRow}>
-            <Sun size={12} color="#FFB347" fill="#FFB347" />
-            <Text style={styles.communityText}>{peopleCount} PEOPLE GETTING THEIR DAILY SUN</Text>
-          </View>
 
           {/* Active Tracking Progress Bar (Pill from IMG_9295) */}
           <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
+            <Animated.View style={[styles.progressBar, isOutdoors && styles.progressBarPulse, isOutdoors && pulseStyle]}>
               {progressPercent > 0 && (
                 <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
               )}
+            </Animated.View>
+          </View>
+
+
+          {/* Morning Light Section */}
+          <View style={styles.morningLightSection}>
+            <View style={styles.morningLightHeader}>
+              <View>
+                <View style={styles.morningLightTitleRow}>
+                  <Text style={styles.morningLightTitle}>Morning Light</Text>
+                  <Pressable
+                    onPress={() => setShowMorningLightInfo(true)}
+                    hitSlop={10}
+                  >
+                    <Info size={18} color="#1A1A2E" style={{ marginLeft: 6 }} />
+                  </Pressable>
+                </View>
+                <Text style={styles.morningLightSubtitle}>
+                  RECOMMENDED FOR IMPROVED ENERGY, MOOD,{'\n'}AND SLEEP
+                </Text>
+              </View>
+              <View style={styles.recommendedTimeContainer}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {isGoalMet ? (
+                    <Shield size={24} color="#FFB347" fill="#FFB347" />
+                  ) : (
+                    <Lock size={24} color="#999" />
+                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <Text style={styles.recommendedTimeValue}>{dailyGoalMinutes}</Text>
+                    <Text style={styles.recommendedTimeUnit}>MIN</Text>
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
 
-          {/* How It Works */}
-          <Pressable
-            style={styles.howItWorksButton}
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-          >
-            <Info size={14} color="#1A1A2E" />
-            <Text style={styles.howItWorksText}>HOW IT WORKS</Text>
-          </Pressable>
+          {/* Flexible Spacing to balance the weather bar */}
+          <View style={{ flex: 1 }} />
 
-          {/* Exposure Status */}
-          <View style={styles.exposureStatusContainer}>
-            <Text style={styles.exposureStatusText}>
-              Today you completed <Text style={styles.exposureValue}>{Math.round(todayProgress.lightMinutes)}</Text> minutes of <Text style={styles.exposureType}>Morning Light Exposure</Text>
-            </Text>
-            <Info size={18} color="rgba(0,0,0,0.3)" />
+          {/* Daylight Bar Section - Now back inside ScrollView */}
+          <View style={styles.daylightSection}>
+            <DaylightBar />
           </View>
 
-          {/* Emergency Unlock Trigger (Floating Pill) */}
-          <Pressable
-            style={styles.emergencyPill}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setShowEmergencyUnlock(true);
-            }}
-          >
-            <AlertCircle size={14} color="#FF6347" />
-            <Text style={styles.emergencyPillText}>Need to unlock an app?</Text>
-          </Pressable>
+          {/* Shielded Apps Carousel - Only show if there are blocked apps */}
+          {blockedApps.some(a => a.isBlocked) && (
+            <View style={styles.shieldedAppsSection}>
+              <View style={styles.shieldedAppsHeader}>
+                <Text style={styles.shieldedAppsTitle}>Shielded Apps</Text>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/shield')}
+                  style={styles.manageShieldsButton}
+                >
+                  <Text style={styles.manageShieldsText}>{blockedApps.filter(a => a.isBlocked).length} Active</Text>
+                  <ArrowRight size={12} color="#666" />
+                </Pressable>
+              </View>
 
-          {/* Spacer if needed to keep button visible */}
-          <View style={{ flex: 1, minHeight: 40 }} />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.shieldedAppsList}
+              >
+                {/* Show only top 3 blocked apps to reduce noise */}
+                {blockedApps.filter(a => a.isBlocked).slice(0, 3).map((app) => (
+                  <Pressable
+                    key={app.id}
+                    style={[styles.shieldedAppItem, { opacity: Math.max(0.4, progressPercent / 100) }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      setSelectedBlockedApp(app.name);
+                      setShowEmergencyUnlock(true);
+                    }}
+                  >
+                    <View style={styles.shieldedAppIconWrapper}>
+                      {app.id === 'instagram' && <Instagram size={32} color="#C13584" />}
+                      {app.id === 'tiktok' && <Video size={32} color="#000000" />}
+                      {app.id === 'twitter' && <Twitter size={32} color="#1DA1F2" />}
+                      {app.id === 'facebook' && <Facebook size={32} color="#1877F2" />}
+                      {app.id === 'youtube' && <Youtube size={32} color="#FF0000" />}
+                      {app.id === 'reddit' && <MessageCircle size={32} color="#FF4500" />}
+                      {app.id === 'snapchat' && <Ghost size={32} color="#FFFC00" />}
+                      {app.id === 'netflix' && <Film size={32} color="#E50914" />}
+
+                      <View style={styles.shieldOverlay}>
+                        <Lock size={12} color="#FFF" />
+                      </View>
+                    </View>
+                    {/* Removed Text Labels to cleaner look */}
+                  </Pressable>
+                ))}
+
+                {blockedApps.filter(a => a.isBlocked).length > 3 && (
+                  <View style={styles.moreAppsIndicator}>
+                    <Text style={styles.moreAppsText}>+{blockedApps.filter(a => a.isBlocked).length - 3}</Text>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Equal spacing below weather bar */}
+          <View style={{ flex: 1 }} />
         </ScrollView>
 
-        {/* White Bottom Card Area - Fixed at bottom */}
-        <View style={styles.bottomCardContainer}>
-          <View style={styles.bottomCard}>
-            <SunArc expanded={isWeatherExpanded} onToggle={toggleWeather} />
-
+        {/* Morning Light Info Modal */}
+        {
+          showMorningLightInfo && (
             <Pressable
-              style={styles.mainCta}
-              onPress={handleStartTracking}
+              style={styles.modalOverlay}
+              onPress={() => setShowMorningLightInfo(false)}
             >
-              <LinearGradient
-                colors={['#FFE4B5', '#FFB347', '#FF8C00']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.ctaGradient}
-              >
-                <Text style={styles.ctaText}>See you in the morning</Text>
-                <ArrowRight size={24} color="#1A1A2E" strokeWidth={2} />
-              </LinearGradient>
+              <Pressable style={styles.morningLightModal} onPress={(e) => e.stopPropagation()}>
+                <Text style={styles.modalParagraph}>
+                  <Text style={styles.modalBold}>Morning sunlight</Text> is the natural light you get within the first 1–2 hours after sunrise. It signals your brain to wake up and align your body's internal clock, also known as the circadian rhythm.
+                </Text>
+
+                <Text style={styles.modalParagraph}>
+                  Exposure to morning light <Text style={styles.modalBold}>raises cortisol levels</Text> (a healthy wake-up hormone) and <Text style={styles.modalBold}>increases serotonin</Text>, <Text style={styles.modalItalic}>improving focus</Text> and <Text style={styles.modalBold}>mood</Text> throughout the day.
+                </Text>
+
+                <Text style={styles.modalParagraph}>
+                  Lumis identifies how long you need to spend outside in the morning for optimal light exposure.
+                </Text>
+
+                <View style={styles.modalHighlight}>
+                  <Text style={styles.modalHighlightText}>
+                    Spend {dailyGoalMinutes} minutes outdoors today{'\n'}between 6:49–11:59 AM.
+                  </Text>
+                </View>
+
+                <Text style={styles.modalNote}>
+                  No sunglasses are needed, but don't look directly at the sun.
+                </Text>
+
+                <Pressable style={styles.modalLearnMore}>
+                  <Text style={styles.modalLearnMoreText}>Learn more about Morning Light</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowMorningLightInfo(false)}
+                >
+                  <Text style={styles.modalCloseText}>Close</Text>
+                </Pressable>
+              </Pressable>
             </Pressable>
-          </View>
-        </View>
-      </View>
+          )
+        }
+      </View >
+
+      {/* Fixed CTA Button - Just above nav bar */}
+      < View style={[styles.fixedCtaContainer, { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 1000 }]} >
+        <Pressable
+          style={styles.mainCta}
+          onPress={handleStartTracking}
+        >
+          <LinearGradient
+            colors={['#FFC77D', '#FF8C00']} // Lighter top to match "swell"
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }} // Vertical gradient
+            style={styles.ctaGradient}
+          >
+            <Text style={styles.ctaText}>{isCheckingLux ? 'Checking light...' : getCtaText()}</Text>
+            {!isCheckingLux && <ArrowRight size={24} color="#1A1A2E" strokeWidth={2} />}
+          </LinearGradient>
+        </Pressable>
+      </View >
 
       <UserSettingsModal
         visible={showSettings}
@@ -292,10 +510,14 @@ export default function DashboardScreen() {
         visible={showEmergencyUnlock}
         onClose={() => setShowEmergencyUnlock(false)}
         onSuccess={() => {
-          console.log('App unlocked via Emergency Flare');
+          unblockApps();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          // Optional: Update state to reflect unblocked status immediately if needed
+          // But useLumisStore's daily progress might not need to change unless we count this as "cheated" progress?
+          // For now, just unblock the apps.
         }}
       />
-    </View>
+    </View >
   );
 }
 
@@ -376,6 +598,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: 16,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  progressBarPulse: {
+    shadowColor: '#FFB347',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 8,
+    borderColor: '#FFB347',
   },
   progressFill: {
     height: '100%',
@@ -419,37 +651,172 @@ const styles = StyleSheet.create({
   exposureType: {
     fontFamily: 'Outfit_600SemiBold',
   },
+  daylightSection: {
+    width: '100%',
+    paddingHorizontal: 24,
+    // Increased standard vertical margin
+    marginVertical: 40,
+  },
+  fixedCtaContainer: {
+    // Reverting to floating capsule style based on "Capsule Shape" request
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 0,
+    backgroundColor: 'transparent',
+  },
+  bottomSection: {
+    width: '100%',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
   bottomCardContainer: {
     width: '100%',
   },
   bottomCard: {
     width: '100%',
     backgroundColor: '#FFF',
-    borderTopLeftRadius: width * 0.4,
-    borderTopRightRadius: width * 0.4,
-    paddingTop: 32,
+    borderTopLeftRadius: width * 0.5,
+    borderTopRightRadius: width * 0.5,
+    paddingTop: 48,
     paddingHorizontal: 24,
     alignItems: 'center',
   },
   sunArcContainer: {
     alignItems: 'center',
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  chevronContainer: {
+  // Daylight Bar Styles
+  daylightContainer: {
+    width: '100%',
+    paddingHorizontal: 8,
+    // Reduced bottom margin for streamlined look
+    marginBottom: 8,
+  },
+  daylightBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sunIconContainer: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  sunTimeSmall: {
+    fontSize: 11,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#666',
+  },
+  daylightTrack: {
+    flex: 1,
+    height: 12,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 6,
+    overflow: 'visible',
+    position: 'relative',
+  },
+  trackGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 6,
+  },
+  trackProgress: {
+    height: '100%',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  sunTracker: {
     position: 'absolute',
-    top: -55,
+    top: -10,
+    marginLeft: -16,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+  },
+  sunGlow: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFB347',
+  },
+  sunDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFB347',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF8C00',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  weatherConditionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  weatherConditionText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: '#666',
+  },
+  // Weather Data Row - Always visible inline
+  weatherDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'baseline', // Strict horizontal baseline alignment
+    paddingVertical: 12, // Increased breathing room
+    gap: 16, // Wider gap between items
+  },
+  weatherDataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weatherDataLabel: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: '#666',
+  },
+  weatherDataValueMinimal: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+  },
+  weatherDataDividerDot: {
+    fontSize: 14,
+    color: '#CCC',
+    marginHorizontal: 4,
+  },
+  // Legacy styles (keeping for compatibility)
+  chevronOutside: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    display: 'none',
+  },
+  chevronOutsideCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: -24,
     zIndex: 10,
+  },
+  arcWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sunTimesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 20,
-    marginTop: -15,
+    marginTop: -30,
   },
   sunTimeItem: {
     alignItems: 'center',
@@ -513,16 +880,19 @@ const styles = StyleSheet.create({
   },
   mainCta: {
     width: '100%',
-    marginBottom: 40,
-    marginTop: 12,
+    shadowColor: '#FF8C00', // Amber glow
+    shadowOffset: { width: 0, height: 8 }, // Balanced, substantial shadow
+    shadowOpacity: 0.5, // Stronger glow opacity
+    shadowRadius: 24, // Wide diffusion for "emitting light" look
+    elevation: 8,
   },
   ctaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 20,
+    paddingVertical: 24, // Increased for ~72px total height
+    paddingHorizontal: 32,
+    borderRadius: 36, // Full capsule shape
   },
   ctaText: {
     fontSize: 20,
@@ -546,5 +916,232 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
     color: '#FF6347',
+  },
+  // Morning Light Section
+  morningLightSection: {
+    paddingHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 32, // Added spacing below the 16 MIN section
+  },
+  morningLightHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  morningLightTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  morningLightTitle: {
+    fontSize: 28,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  morningLightSubtitle: {
+    fontSize: 9,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#666',
+    letterSpacing: 0.5,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  recommendedTimeContainer: {
+    alignItems: 'flex-end',
+  },
+  recommendedTimeValue: {
+    fontSize: 48,
+    fontFamily: 'Outfit_400Regular',
+    color: '#1A1A2E',
+    lineHeight: 52,
+  },
+  recommendedTimeUnit: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#999',
+    marginLeft: 4,
+  },
+  lightTypeText: {
+    fontSize: 24,
+    fontFamily: 'Outfit_400Regular',
+    color: 'rgba(26, 26, 46, 0.3)',
+    marginTop: 8,
+  },
+  // Modal Styles
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  morningLightModal: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    marginHorizontal: 24,
+    maxWidth: 400,
+  },
+  modalParagraph: {
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
+    color: '#333',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  modalBold: {
+    fontFamily: 'Outfit_700Bold',
+  },
+  modalItalic: {
+    fontStyle: 'italic',
+  },
+  modalHighlight: {
+    backgroundColor: '#FFF9C4',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  modalHighlightText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+    lineHeight: 22,
+  },
+  modalNote: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalLearnMore: {
+    borderWidth: 1,
+    borderColor: '#E0C090',
+    borderRadius: 24,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalLearnMoreText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: '#B8860B',
+  },
+  modalCloseButton: {
+    backgroundColor: '#1A1A2E',
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#FFF',
+  },
+  shieldedAppsSection: {
+    // Reduced bottom margin to bring it closer to equal visual weight but kept enough space
+    marginBottom: 0,
+    marginTop: 40, // Increased to separate from weather row
+    width: '90%', // Narrower than full width
+    alignSelf: 'center', // Centered
+  },
+  shieldedAppsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  shieldedAppsTitle: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#1A1A2E',
+  },
+  manageShieldsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 12,
+  },
+  manageShieldsText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#666',
+  },
+  shieldedAppsList: {
+    paddingHorizontal: 24,
+    gap: 16,
+    paddingRight: 40,
+  },
+  shieldedAppItem: {
+    alignItems: 'center',
+    width: 64,
+  },
+  shieldedAppIconWrapper: {
+    width: 60, // Normalized size
+    height: 60,
+    borderRadius: 20, // Softer corners
+    backgroundColor: 'transparent', // Removed background
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0,
+    borderWidth: 0, // Removed border
+  },
+  shieldOverlay: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#1A1A2E',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  shieldedAppName: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    color: '#1A1A2E',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  unlockTimeText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_400Regular',
+    color: '#FF6B6B',
+    textAlign: 'center',
+  },
+  moreAppsIndicator: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreAppsText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#666',
+  },
+  manualLogLink: {
+    marginTop: 24,
+    marginBottom: 48,
+    alignSelf: 'center',
+    padding: 8,
+  },
+  manualLogLinkText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: '#999',
+    textDecorationLine: 'underline',
   },
 });

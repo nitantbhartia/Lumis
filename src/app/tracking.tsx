@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, Platform, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ import { Sun, Pause, Play, X, MapPin, Zap } from 'lucide-react-native';
 import { calculateVitaminD, calculateLightQuality } from '@/lib/bio-metrics';
 import Svg, { Circle, Line, Text as SvgText, G, Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { unblockApps } from '@/lib/screen-time';
+import { deactivateShield } from '@/lib/screen-time';
 import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
 
 const { width, height } = Dimensions.get('window');
@@ -108,6 +108,7 @@ export default function TrackingScreen() {
   const incrementStreak = useLumisStore((s) => s.incrementStreak);
   const addToHistory = useLumisStore((s) => s.addToHistory);
   const setTrackingActive = useLumisStore((s) => s.setTrackingActive);
+  const setSelectedActivity = useLumisStore((s) => s.setSelectedActivity);
 
   const { status, lux, steps, creditRate } = useSmartEnvironment();
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -133,13 +134,18 @@ export default function TrackingScreen() {
       case 'walk': return 'WALKING';
       case 'run': return 'RUNNING';
       case 'meditate': return 'MEDITATING';
-      case 'sit_soak': return 'SIT & SOAK';
+      case 'sit_soak': return 'MORNING LIGHT';
       default: return 'TRACKING';
     }
   };
 
   useEffect(() => {
     setTrackingActive(true);
+
+    // Default to 'sit_soak' for generic morning light if nothing selected
+    if (!selectedActivity) {
+      setSelectedActivity('sit_soak');
+    }
 
     pulseScale.value = withRepeat(
       withTiming(1.02, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
@@ -209,7 +215,7 @@ export default function TrackingScreen() {
   useEffect(() => {
     if (isGoalReached && !todayProgress.completed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      unblockApps();
+      deactivateShield(); // Lift all app shields after sunlight goal met
 
       const completedProgress = {
         ...todayProgress,
@@ -339,8 +345,43 @@ export default function TrackingScreen() {
             <Text style={styles.timerText}>{formatTime(sessionSeconds)}</Text>
           </View>
 
+          {/* Activity Tags (Secondary Customization) */}
+          <View style={styles.activitySelectorContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.activityScrollContent}
+            >
+              {[
+                { id: 'sit_soak', label: 'Morning Light' },
+                { id: 'walk', label: 'Walking' },
+                { id: 'run', label: 'Running' },
+                { id: 'meditate', label: 'Meditation' },
+              ].map((activity) => (
+                <Pressable
+                  key={activity.id}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedActivity(activity.id as any);
+                  }}
+                  style={[
+                    styles.activityChip,
+                    selectedActivity === activity.id && styles.activityChipActive
+                  ]}
+                >
+                  <Text style={[
+                    styles.activityChipText,
+                    selectedActivity === activity.id && styles.activityChipTextActive
+                  ]}>
+                    {activity.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+
           {/* Bottom Spacer */}
-          <View style={{ flex: 1 }} />
+          <View style={{ height: 20 }} />
 
           {/* Pause Button */}
           <Pressable
@@ -497,5 +538,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
+  },
+  activitySelectorContainer: {
+    width: '100%',
+    marginTop: 20,
+  },
+  activityScrollContent: {
+    paddingHorizontal: 0,
+    gap: 8,
+  },
+  activityChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  activityChipActive: {
+    backgroundColor: '#FFE4B5',
+    borderColor: '#FFE4B5',
+  },
+  activityChipText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#FFF',
+    letterSpacing: 0.5,
+  },
+  activityChipTextActive: {
+    color: '#1A1A2E',
   },
 });

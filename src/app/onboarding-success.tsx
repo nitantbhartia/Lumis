@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuthStore } from '@/lib/state/auth-store';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { Sun, Sparkles, ArrowRight } from 'lucide-react-native';
+import { formatFirstName } from '@/lib/utils/name-utils';
 
 const { width } = Dimensions.get('window');
 
@@ -93,7 +94,7 @@ export default function OnboardingSuccessScreen() {
     ],
   }));
 
-  const displayName = userName || 'Explorer';
+  const displayName = formatFirstName(userName || 'Explorer');
 
   return (
     <View className="flex-1">

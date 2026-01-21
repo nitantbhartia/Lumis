@@ -48,13 +48,20 @@ export default function IndexScreen() {
       return () => clearTimeout(timer);
     }
 
-    // Not authenticated - start the new passwordless flow
-    // Go to splash screen immediately
-    const timer = setTimeout(() => {
-      router.replace('/onboarding-splash');
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Not authenticated cases
+    if (hasCompletedOnboarding) {
+      // Returning user - take them straight to auth
+      const timer = setTimeout(() => {
+        router.replace('/onboarding-auth');
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      // New user - start from splash
+      const timer = setTimeout(() => {
+        router.replace('/onboarding-splash');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
   }, [isAuthenticated, hasCompletedOnboarding]);
 
   const titleStyle = useAnimatedStyle(() => ({

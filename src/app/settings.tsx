@@ -23,6 +23,7 @@ import {
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
 import { GlassCard } from '@/components/GlassCard';
+import { formatFirstName } from '@/lib/utils/name-utils';
 
 function SectionHeader({ title, delay = 0 }: { title: string; delay?: number }) {
   return (
@@ -279,7 +280,7 @@ export default function SettingsScreen() {
                   <User size={22} color="#FFF8E7" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-lumis-dawn text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>{user?.name || 'Lumis Explorer'}</Text>
+                  <Text className="text-lumis-dawn text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>{formatFirstName(user?.name || 'Explorer')}</Text>
                   <Text className="text-lumis-sunrise/40 text-sm">{user?.email || 'Premium member'}</Text>
                 </View>
               </View>

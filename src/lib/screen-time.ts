@@ -28,57 +28,97 @@ export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
     }
 };
 
-export const blockApps = (): boolean => {
+/**
+ * Present the iOS FamilyActivityPicker for users to select apps to shield.
+ * This shows the native Apple picker UI.
+ */
+export const showAppPicker = async (): Promise<boolean> => {
     if (!isAvailable) return false;
     try {
-        // Safe check for method existence
-        if (typeof ScreenTime?.blockAllApps !== 'function') {
-            console.warn('[ScreenTime] blockAllApps not available');
-            return false;
-        }
-        const result = ScreenTime.blockAllApps();
-        console.log('[ScreenTime] Block apps result:', result);
+        const result = await ScreenTime.showAppPicker();
+        console.log('[ScreenTime] showAppPicker result:', result);
         return result;
     } catch (error) {
-        console.error('[ScreenTime] Error blocking apps:', error);
+        console.error('[ScreenTime] Error showing app picker:', error);
         return false;
     }
+};
+
+/**
+ * Activate shields on selected apps.
+ * Call this when morning shield should be enforced.
+ */
+export const activateShield = (): boolean => {
+    if (!isAvailable) return false;
+    try {
+        const result = ScreenTime.activateShield();
+        console.log('[ScreenTime] activateShield result:', result);
+        return result;
+    } catch (error) {
+        console.error('[ScreenTime] Error activating shield:', error);
+        return false;
+    }
+};
+
+/**
+ * Deactivate all shields.
+ * Call this when user completes their sunlight session.
+ */
+export const deactivateShield = (): boolean => {
+    if (!isAvailable) return false;
+    try {
+        const result = ScreenTime.deactivateShield();
+        console.log('[ScreenTime] deactivateShield result:', result);
+        return result;
+    } catch (error) {
+        console.error('[ScreenTime] Error deactivating shield:', error);
+        return false;
+    }
+};
+
+/**
+ * Get count of apps selected for shielding.
+ */
+export const getSelectedAppCount = (): number => {
+    if (!isAvailable) return 0;
+    try {
+        return ScreenTime.getSelectedAppCount();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting app count:', error);
+        return 0;
+    }
+};
+
+/**
+ * Check if shield is currently active.
+ */
+export const isShieldActive = (): boolean => {
+    if (!isAvailable) return false;
+    try {
+        return ScreenTime.isShieldActive();
+    } catch (error) {
+        console.error('[ScreenTime] Error checking shield status:', error);
+        return false;
+    }
+};
+
+// Legacy functions for backwards compatibility
+export const blockApps = (): boolean => {
+    return activateShield();
 };
 
 export const unblockApps = (): boolean => {
-    if (!isAvailable) return false;
-    try {
-        if (typeof ScreenTime?.unblockAllApps !== 'function') {
-            console.warn('[ScreenTime] unblockAllApps not available');
-            return false;
-        }
-        const result = ScreenTime.unblockAllApps();
-        console.log('[ScreenTime] Unblock apps result:', result);
-        return result;
-    } catch (error) {
-        console.error('[ScreenTime] Error unblocking apps:', error);
-        return false;
-    }
+    return deactivateShield();
 };
 
 export const areAppsCurrentlyBlocked = (): boolean => {
-    if (!isAvailable) return false;
-    try {
-        if (typeof ScreenTime?.areAppsBlocked !== 'function') {
-            return false;
-        }
-        return ScreenTime.areAppsBlocked();
-    } catch (error) {
-        console.error('[ScreenTime] Error checking blocked status:', error);
-        return false;
-    }
+    return isShieldActive();
 };
 
-// Legacy placeholder functions for backwards compatibility
 export const setAppRestrictions = async (appIds: string[]): Promise<boolean> => {
-    return blockApps();
+    return activateShield();
 };
 
 export const clearAppRestrictions = async (): Promise<boolean> => {
-    return unblockApps();
+    return deactivateShield();
 };

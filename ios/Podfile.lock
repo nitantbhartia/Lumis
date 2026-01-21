@@ -289,6 +289,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - ExpoAppleAuthentication (7.2.4):
+    - ExpoModulesCore
   - ExpoAsset (11.1.7):
     - ExpoModulesCore
   - ExpoBackgroundFetch (13.1.6):
@@ -479,11 +481,11 @@ PODS:
     - Yoga
   - lumisscreentime (1.0.0):
     - ExpoModulesCore
-  - PurchasesHybridCommon (17.28.0):
-    - RevenueCat (= 5.55.1)
-  - PurchasesHybridCommonUI (17.28.0):
-    - PurchasesHybridCommon (= 17.28.0)
-    - RevenueCatUI (= 5.55.1)
+  - PurchasesHybridCommon (17.23.0):
+    - RevenueCat (= 5.50.0)
+  - PurchasesHybridCommonUI (17.23.0):
+    - PurchasesHybridCommon (= 17.23.0)
+    - RevenueCatUI (= 5.50.0)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -1919,7 +1921,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-keyboard-controller (1.20.6):
+  - react-native-keyboard-controller (1.20.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1934,7 +1936,7 @@ PODS:
     - React-hermes
     - React-ImageManager
     - React-jsi
-    - react-native-keyboard-controller/common (= 1.20.6)
+    - react-native-keyboard-controller/common (= 1.20.2)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1944,7 +1946,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-keyboard-controller/common (1.20.6):
+  - react-native-keyboard-controller/common (1.20.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2590,9 +2592,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RevenueCat (5.55.1)
-  - RevenueCatUI (5.55.1):
-    - RevenueCat (= 5.55.1)
+  - RevenueCat (5.50.0)
+  - RevenueCatUI (5.50.0):
+    - RevenueCat (= 5.50.0)
   - RNAppleHealthKit (1.7.0):
     - React
   - RNCAsyncStorage (2.1.2):
@@ -2763,11 +2765,11 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNPaywalls (9.7.1):
-    - PurchasesHybridCommonUI (= 17.28.0)
+  - RNPaywalls (9.6.10):
+    - PurchasesHybridCommonUI (= 17.23.0)
     - React-Core
-  - RNPurchases (9.7.1):
-    - PurchasesHybridCommon (= 17.28.0)
+  - RNPurchases (9.6.10):
+    - PurchasesHybridCommon (= 17.23.0)
     - React-Core
   - RNReanimated (3.17.4):
     - DoubleConversion
@@ -3039,6 +3041,7 @@ DEPENDENCIES:
   - expo-dev-launcher (from `../node_modules/expo-dev-launcher`)
   - expo-dev-menu (from `../node_modules/expo-dev-menu`)
   - expo-dev-menu-interface (from `../node_modules/expo-dev-menu-interface/ios`)
+  - ExpoAppleAuthentication (from `../node_modules/expo-apple-authentication/ios`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - ExpoBackgroundFetch (from `../node_modules/expo-background-fetch/ios`)
   - ExpoBattery (from `../node_modules/expo-battery/ios`)
@@ -3251,6 +3254,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-dev-menu"
   expo-dev-menu-interface:
     :path: "../node_modules/expo-dev-menu-interface/ios"
+  ExpoAppleAuthentication:
+    :path: "../node_modules/expo-apple-authentication/ios"
   ExpoAsset:
     :path: "../node_modules/expo-asset/ios"
   ExpoBackgroundFetch:
@@ -3579,6 +3584,7 @@ SPEC CHECKSUMS:
   expo-dev-launcher: 35dc0269b5fc1f628abc00e08e5a969e7809eff4
   expo-dev-menu: 0771fa9c5c405e07aa15e55a699b8a4a984ea77a
   expo-dev-menu-interface: 609c35ae8b97479cdd4c9e23c8cf6adc44beea0e
+  ExpoAppleAuthentication: 4d2e0c88a4463229760f1fbb9a937a810efb6863
   ExpoAsset: ef06e880126c375f580d4923fdd1cdf4ee6ee7d6
   ExpoBackgroundFetch: 6dcade705c90ae5b7e2d0836b9145cae8f5f3070
   ExpoBattery: f824a89ff65cc0a26a3d3b5ad34d52c81bf75de3
@@ -3641,8 +3647,8 @@ SPEC CHECKSUMS:
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 8bc11e10576d1a3f77f4e0ae5b70503c5c890a09
   lumisscreentime: 55a74011615f1ea491fa3953db77d3362b4b4d90
-  PurchasesHybridCommon: c2f8f5fcd2e472c585fccd1ab2fe317a3dc1171e
-  PurchasesHybridCommonUI: 81113f049b6a618e06e38e6f1510c6c7654435f9
+  PurchasesHybridCommon: e95a0b9bb01f6e9101d44f411343fb91030e26ae
+  PurchasesHybridCommonUI: 476200612e1f5be556ef20327d5da8886d657a3d
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: 9bc64754b40b86fa5e32f293ab3ea8eea2248339
   RCTRequired: ee36c1ce9a5e65a3f629c13f38a85308eb8eebda
@@ -3678,7 +3684,7 @@ SPEC CHECKSUMS:
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-ios-context-menu: 58804cdc253f80878284abe55ac5a050d4cde96a
   react-native-ios-utilities: 5e0a432d2cb4411df177bf439f7be7d61624d37b
-  react-native-keyboard-controller: 961a82f90750e40d7e23e80fa3d1ba5d0fcd268e
+  react-native-keyboard-controller: 394dfa7d8e678d835c32f5d1d06cfab494d71d56
   react-native-maps: 9febd31278b35cd21e4fad2cf6fa708993be5dab
   react-native-menu: e16cf47d02def17ff9d576f25402322d32f5ff46
   react-native-mmkv: 9dc23f655bbf1f984e84887f43b5299ffa2ceb07
@@ -3722,8 +3728,8 @@ SPEC CHECKSUMS:
   ReactCodegen: 06cf663b23a161f42a2e14087269753f422885c0
   ReactCommon: 44c86ec3ace664c0f33b7a2ac89aced8304ef25e
   ReactNativeEnriched: 425886889c4d406810c8fbfd64bd668e4bdae711
-  RevenueCat: 347221fad5ab0ed5636546867deae2c32c64749f
-  RevenueCatUI: 5b8e20f13156e85efcfa1ad03d1aadc08cd9af2c
+  RevenueCat: a5fcd0a12b5ec9bbddc0cf0dd20c14b7e6213df6
+  RevenueCatUI: d470454494ecc734ca9b416fea0704613c4cd7a2
   RNAppleHealthKit: 86ef7ab70f762b802f5c5289372de360cca701f9
   RNCAsyncStorage: 39c42c1e478e1f5166d1db52b5055e090e85ad66
   RNCClipboard: ea6045252d5c0753cf17f62290f647dc0096f6ac
@@ -3732,8 +3738,8 @@ SPEC CHECKSUMS:
   RNDateTimePicker: a4ad049fdd568755003c479beac3bdea742ac4d0
   RNFlashList: 7ad51f0d0d51a3b7b1d1bb07947b927cb352afc4
   RNGestureHandler: 7d0931a61d7ba0259f32db0ba7d0963c3ed15d2b
-  RNPaywalls: 8c86e83105695edda21839ed52a7e1ff7f66d34b
-  RNPurchases: e265e2ed27349b567b91b89d8712aa8c9c57f5b0
+  RNPaywalls: 638800e62194330656c53c34257f3b7fabb17e2e
+  RNPurchases: 393312c7ac9cfb3852e3f14a91520d305fa05be6
   RNReanimated: 284f97b0ca6dbb1a0a9a61c83ada9ad2976458ab
   RNScreens: 482e9707f9826230810c92e765751af53826d509
   RNSVG: 794f269526df9ddc1f79b3d1a202b619df0368e3
