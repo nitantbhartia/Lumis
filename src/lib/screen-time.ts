@@ -1,22 +1,31 @@
-import * as ScreenTime from 'lumis-screen-time';
+import * as ScreenTime from 'lumisscreentime';
 import { Platform } from 'react-native';
 
+const isAvailable = Platform.OS === 'ios';
+
 export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
-    if (Platform.OS !== 'ios') return false;
+    if (!isAvailable) return false;
     try {
+        console.log('[ScreenTime] Testing native link:', ScreenTime.hello());
         const result = await ScreenTime.requestAuthorization();
         console.log('[ScreenTime] Authorization result:', result);
         return result;
     } catch (error: any) {
         console.error('[ScreenTime] Authorization error:', error);
-        alert(`Screen Time Error: ${error?.message || JSON.stringify(error)}`);
+        const errorMessage = error?.message || JSON.stringify(error);
+        alert(`Screen Time Error: ${errorMessage}`);
         return false;
     }
 };
 
 export const blockApps = (): boolean => {
-    if (Platform.OS !== 'ios') return false;
+    if (!isAvailable) return false;
     try {
+        // Safe check for method existence
+        if (typeof ScreenTime?.blockAllApps !== 'function') {
+            console.warn('[ScreenTime] blockAllApps not available');
+            return false;
+        }
         const result = ScreenTime.blockAllApps();
         console.log('[ScreenTime] Block apps result:', result);
         return result;
@@ -27,8 +36,12 @@ export const blockApps = (): boolean => {
 };
 
 export const unblockApps = (): boolean => {
-    if (Platform.OS !== 'ios') return false;
+    if (!isAvailable) return false;
     try {
+        if (typeof ScreenTime?.unblockAllApps !== 'function') {
+            console.warn('[ScreenTime] unblockAllApps not available');
+            return false;
+        }
         const result = ScreenTime.unblockAllApps();
         console.log('[ScreenTime] Unblock apps result:', result);
         return result;
@@ -39,8 +52,11 @@ export const unblockApps = (): boolean => {
 };
 
 export const areAppsCurrentlyBlocked = (): boolean => {
-    if (Platform.OS !== 'ios') return false;
+    if (!isAvailable) return false;
     try {
+        if (typeof ScreenTime?.areAppsBlocked !== 'function') {
+            return false;
+        }
         return ScreenTime.areAppsBlocked();
     } catch (error) {
         console.error('[ScreenTime] Error checking blocked status:', error);
@@ -50,11 +66,9 @@ export const areAppsCurrentlyBlocked = (): boolean => {
 
 // Legacy placeholder functions for backwards compatibility
 export const setAppRestrictions = async (appIds: string[]): Promise<boolean> => {
-    console.log('[ScreenTime] setAppRestrictions called - using blockAllApps instead');
     return blockApps();
 };
 
 export const clearAppRestrictions = async (): Promise<boolean> => {
-    console.log('[ScreenTime] clearAppRestrictions called - using unblockApps instead');
     return unblockApps();
 };

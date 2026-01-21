@@ -106,7 +106,7 @@
     "expo-web-browser": "~14.2.0",
     "lottie-react-native": "7.2.2",
     "lucide-react-native": "^0.468.0",
-    "lumis-screen-time": "file:./modules/lumis-screen-time",
+    "lumisscreentime": "file:modules/lumisscreentime",
     "nativewind": "~4.1.23",
     "patch-package": "^8.0.0",
     "pretty-format": "^29.7.0",

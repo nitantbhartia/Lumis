@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, Dimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,16 +7,21 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
+  withSequence,
   Easing,
+  FadeIn,
   FadeInDown,
+  interpolate,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useRef } from 'react';
 import LuxSensor from 'expo-lux-sensor';
 import { useAuthStore } from '@/lib/state/auth-store';
-import { Sun, ArrowRight, RefreshCw } from 'lucide-react-native';
+import { Sun, ArrowRight, Sparkles, Activity } from 'lucide-react-native';
+import Svg, { Circle, G, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
+const RING_SIZE = 260;
 
 export default function OnboardingCalibrationScreen() {
   const router = useRouter();
@@ -24,11 +29,13 @@ export default function OnboardingCalibrationScreen() {
   const setSensorCalibration = useAuthStore((s) => s.setSensorCalibration);
 
   const [lightLevel, setLightLevel] = useState(0);
-  const [countdown, setCountdown] = useState(5);
+  const [peakLight, setPeakLight] = useState(0);
   const [showComplete, setShowComplete] = useState(false);
   const [hasDetectedLight, setHasDetectedLight] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
-  const barWidth = useSharedValue(0);
+  const ringProgress = useSharedValue(0);
+  const pulseScale = useSharedValue(1);
   const subscriptionRef = useRef<any>(null);
 
   const startSensor = async () => {
@@ -48,12 +55,16 @@ export default function OnboardingCalibrationScreen() {
         if (lux > 0) {
           setLightLevel(lux);
           setHasDetectedLight(true);
+          if (lux > peakLight) setPeakLight(lux);
 
-          // Update bar based on lux (max at 500 for visual)
-          barWidth.value = withTiming(Math.min((lux / 500) * (width - 64), width - 64), {
-            duration: 300,
-            easing: Easing.out(Easing.quad),
-          });
+          // Progress towards "good light" threshold (500 lux = 100%)
+          const progress = Math.min(lux / 500, 1);
+          ringProgress.value = withTiming(progress, { duration: 200 });
+
+          // Haptic tick for high light
+          if (lux > 200 && lux % 50 < 10) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
         }
       });
     } catch (e) {
@@ -63,16 +74,22 @@ export default function OnboardingCalibrationScreen() {
 
   useEffect(() => {
     startSensor();
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.06, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
     return () => {
       if (subscriptionRef.current) subscriptionRef.current.remove();
       LuxSensor.stopAsync().catch(() => { });
     };
   }, []);
 
-  // Simple countdown - complete after 5 seconds IF we detected any light
   useEffect(() => {
     if (showComplete) return;
-
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -83,13 +100,12 @@ export default function OnboardingCalibrationScreen() {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, [showComplete]);
 
   const completeCalibration = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSensorCalibration({ light: lightLevel || 500, timestamp: Date.now() });
+    setSensorCalibration({ light: peakLight || lightLevel || 500, timestamp: Date.now() });
     setShowComplete(true);
     LuxSensor.stopAsync().catch(() => { });
   };
@@ -99,100 +115,112 @@ export default function OnboardingCalibrationScreen() {
     router.push('/app-selection');
   };
 
-  const handleSkipNow = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSensorCalibration({ light: 500, timestamp: Date.now() });
-    router.push('/app-selection');
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  const ringStyle = useAnimatedStyle(() => {
+    const circumference = 2 * Math.PI * (RING_SIZE / 2 - 12);
+    return {
+      strokeDashoffset: circumference * (1 - ringProgress.value),
+    };
+  });
+
+  const getIntensityLabel = () => {
+    if (lightLevel < 50) return 'Low';
+    if (lightLevel < 200) return 'Indoor';
+    if (lightLevel < 500) return 'Bright';
+    return 'Sunlight';
   };
 
-  const barStyle = useAnimatedStyle(() => ({
-    width: barWidth.value,
-  }));
+  const getIntensityColor = () => {
+    if (lightLevel < 50) return '#6366F1';
+    if (lightLevel < 200) return '#FFB347';
+    if (lightLevel < 500) return '#FF8C00';
+    return '#4ADE80';
+  };
 
   return (
     <View className="flex-1">
-      <LinearGradient
-        colors={['#1A1A2E', '#16213E', '#1A1A2E']}
-        style={{ flex: 1 }}
-      >
+      <LinearGradient colors={['#0F0F1E', '#1A1A2E', '#0F0F1E']} style={{ flex: 1 }}>
         <View
-          className="flex-1 px-8"
+          className="flex-1 px-8 items-center justify-between"
           style={{ paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }}
         >
           {/* Header */}
-          <View className="mb-8">
-            <Text className="text-4xl text-lumis-dawn" style={{ fontFamily: 'Outfit_700Bold' }}>
-              Quick{'\n'}Light Check
+          <Animated.View entering={FadeIn} className="items-center w-full">
+            <View className="flex-row items-center bg-white/5 px-4 py-2 rounded-full border border-white/10 mb-6">
+              <Activity size={14} color="#FFB347" />
+              <Text className="text-lumis-golden text-[10px] font-black ml-2 uppercase tracking-widest">Sensor Check</Text>
+            </View>
+            <Text className="text-3xl text-lumis-dawn text-center leading-tight" style={{ fontFamily: 'Outfit_700Bold' }}>
+              Tuning Into{'\n'}Your Light
             </Text>
-          </View>
+            <Text className="text-lumis-sunrise/50 text-sm text-center mt-3 px-4">
+              Point your phone's camera towards a light source for best results.
+            </Text>
+          </Animated.View>
 
-          <Text className="text-lumis-sunrise/60 text-base mb-12 leading-relaxed" style={{ fontFamily: 'Outfit_400Regular' }}>
-            We're checking your device's light sensor. This only takes a moment.
-          </Text>
-
-          {/* Main Display */}
-          <View className="flex-1 items-center justify-center">
+          {/* Main Visual */}
+          <View className="items-center justify-center">
             {showComplete ? (
               <Animated.View entering={FadeInDown} className="items-center">
-                <View className="bg-green-500/10 p-8 rounded-full mb-6">
-                  <Sun size={64} color="#4ADE80" />
+                <View className="bg-green-500/10 p-10 rounded-full mb-6 border border-green-500/20">
+                  <Sparkles size={60} color="#4ADE80" />
                 </View>
-                <Text className="text-3xl text-lumis-dawn font-bold mb-2">All Set!</Text>
-                <Text className="text-lumis-sunrise/60">Light sensor calibrated</Text>
+                <Text className="text-3xl text-lumis-dawn font-black mb-2">Synced</Text>
+                <Text className="text-lumis-sunrise/50 text-center">Your sensor is calibrated to your environment.</Text>
               </Animated.View>
             ) : (
-              <View className="items-center w-full">
-                {/* Lux Display */}
-                <View className="items-center mb-12">
-                  <Text className="text-8xl text-lumis-golden" style={{ fontFamily: 'Outfit_700Bold' }}>
-                    {lightLevel}
-                  </Text>
-                  <Text className="text-sm text-lumis-sunrise/40 uppercase tracking-widest mt-2">
-                    Current Light
-                  </Text>
-                </View>
-
-                {/* Progress Bar */}
-                <View className="w-full h-4 rounded-full overflow-hidden bg-white/5 mb-8">
-                  <Animated.View style={[barStyle, { height: '100%', borderRadius: 8 }]}>
-                    <LinearGradient
-                      colors={['#FFB347', '#FF8C00']}
-                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                      style={{ flex: 1 }}
+              <Animated.View style={pulseStyle} className="items-center justify-center">
+                <Svg width={RING_SIZE} height={RING_SIZE}>
+                  <Defs>
+                    <RadialGradient id="luxGlow" cx="50%" cy="50%" rx="50%" ry="50%">
+                      <Stop offset="0%" stopColor={getIntensityColor()} stopOpacity="0.3" />
+                      <Stop offset="100%" stopColor={getIntensityColor()} stopOpacity="0" />
+                    </RadialGradient>
+                  </Defs>
+                  <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_SIZE / 2 - 20} fill="url(#luxGlow)" />
+                  <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_SIZE / 2 - 12} stroke="#FFFFFF" strokeWidth={4} fill="transparent" opacity={0.05} />
+                  <G transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}>
+                    <Circle
+                      cx={RING_SIZE / 2}
+                      cy={RING_SIZE / 2}
+                      r={RING_SIZE / 2 - 12}
+                      stroke={getIntensityColor()}
+                      strokeWidth={6}
+                      fill="transparent"
+                      strokeDasharray={2 * Math.PI * (RING_SIZE / 2 - 12)}
+                      strokeDashoffset={2 * Math.PI * (RING_SIZE / 2 - 12) * (1 - Math.min(lightLevel / 500, 1))}
+                      strokeLinecap="round"
                     />
-                  </Animated.View>
+                  </G>
+                </Svg>
+                <View className="absolute items-center justify-center">
+                  <Text className="text-7xl text-lumis-dawn" style={{ fontFamily: 'Syne_800ExtraBold' }}>{lightLevel}</Text>
+                  <Text className="text-lumis-sunrise/40 text-xs uppercase font-black tracking-widest mt-1">LUX</Text>
+                  <View className="mt-4 px-4 py-1.5 rounded-full" style={{ backgroundColor: getIntensityColor() + '20' }}>
+                    <Text style={{ color: getIntensityColor() }} className="text-xs font-black uppercase tracking-widest">{getIntensityLabel()}</Text>
+                  </View>
                 </View>
-
-                {/* Countdown */}
-                <Text className="text-lumis-sunrise/50 text-sm">
-                  {hasDetectedLight ? `Completing in ${countdown}s...` : `Waiting for sensor... ${countdown}s`}
-                </Text>
-              </View>
+              </Animated.View>
             )}
           </View>
 
           {/* Footer */}
-          <View className="items-center">
+          <View className="w-full items-center">
             {showComplete ? (
-              <Pressable
-                onPress={handleContinue}
-                className="bg-lumis-golden w-full py-5 rounded-2xl flex-row items-center justify-center"
-              >
-                <Text className="text-[#1A1A2E] text-lg font-black mr-2">Continue</Text>
-                <ArrowRight size={20} color="#1A1A2E" strokeWidth={3} />
+              <Pressable onPress={handleContinue} className="w-full">
+                <LinearGradient colors={['#FFB347', '#FF8C00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 20, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text className="text-lumis-night text-lg font-black uppercase tracking-widest mr-2">Continue</Text>
+                  <ArrowRight size={20} color="#1A1A2E" strokeWidth={3} />
+                </LinearGradient>
               </Pressable>
             ) : (
-              <View className="w-full">
-                <Pressable
-                  onPress={handleSkipNow}
-                  className="bg-white/10 w-full py-4 rounded-2xl items-center mb-4"
-                >
-                  <Text className="text-lumis-dawn font-bold">Skip & Continue →</Text>
-                </Pressable>
-
-                <Pressable onPress={startSensor} className="flex-row items-center justify-center opacity-50">
-                  <RefreshCw size={14} color="#FFF" />
-                  <Text className="text-white/60 text-xs ml-2">Restart Sensor</Text>
+              <View className="items-center">
+                <Text className="text-lumis-sunrise/30 text-sm font-bold">{hasDetectedLight ? `Completing in ${countdown}s...` : `Detecting light... ${countdown}s`}</Text>
+                <Pressable onPress={completeCalibration} className="mt-4 opacity-50">
+                  <Text className="text-white/40 text-xs uppercase tracking-widest">Skip for now</Text>
                 </Pressable>
               </View>
             )}

@@ -78,9 +78,10 @@ export default function OnboardingPermissionsScreen() {
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error granting ${permissionId}:`, error);
-      alert(`Error granting ${permissionId}: ${JSON.stringify(error)}`);
+      const msg = error?.message || 'Unknown error';
+      alert(`Error granting ${permissionId}: ${msg}`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsLoading(false);

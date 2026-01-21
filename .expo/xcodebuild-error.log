@@ -1,0 +1,13 @@
+/Users/nitant/Downloads/Lumis/ios/Pods/Target Support Files/Pods-Lumis/ExpoModulesProvider.swift:63:8: error: Unable to find module dependency: 'lumisscreentime'
+import lumisscreentime
+       ^
+/Users/nitant/Downloads/Lumis/ios/Pods/Target Support Files/Pods-Lumis/ExpoModulesProvider.swift:63:8: note: a dependency of main module 'Lumis'
+import lumisscreentime
+       ^
+** BUILD FAILED **
+
+
+The following build commands failed:
+	SwiftDriver Lumis normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Lumis' from project 'Lumis')
+	Building workspace Lumis with scheme Lumis and configuration Debug
+(2 failures)
