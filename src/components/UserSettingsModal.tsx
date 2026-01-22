@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions, Modal, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, LogOut, ChevronRight, Moon, Sun, Bell } from 'lucide-react-native';
+import { X, LogOut, ChevronRight, Moon, Sun, Bell, Shield } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/lib/state/auth-store';
@@ -94,6 +94,16 @@ export default function UserSettingsModal({ visible, onClose }: UserSettingsModa
 
                     {/* Settings Groups */}
                     <View style={styles.menuGroup}>
+                        <MenuItem
+                            icon={Shield}
+                            label="Shield Settings"
+                            value="Manage"
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onClose();
+                                router.push('/(tabs)/shield');
+                            }}
+                        />
                         <MenuItem
                             icon={Bell}
                             label="Notifications"

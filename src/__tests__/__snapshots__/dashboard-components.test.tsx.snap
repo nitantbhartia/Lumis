@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Dashboard Components DaylightBar renders correctly 1`] = `null`;
+
+exports[`Dashboard Components MissionBriefingCard renders correctly 1`] = `null`;
+
+exports[`Dashboard Components MissionBriefingCard renders correctly for clear weather 1`] = `null`;
+
+exports[`Dashboard Components MissionBriefingCard renders correctly for cloudy weather 1`] = `null`;
+
+exports[`Dashboard Components ShieldCta renders correctly 1`] = `null`;
+
+exports[`Dashboard Components ShieldCta renders correctly when goal met 1`] = `null`;
+
+exports[`Dashboard Components ShieldCta renders correctly when locked 1`] = `null`;

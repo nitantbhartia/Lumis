@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Switch, Image, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Switch, Image, Dimensions, Platform, ActivityIndicator, Alert, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Shield, Lock, Unlock, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Ghost, Film, AlertCircle, Plus, Check } from 'lucide-react-native';
+import { Shield, Lock, Unlock, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Ghost, Film, AlertCircle, Plus, Check, Layers, Search, Target, X } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import * as Haptics from 'expo-haptics';
-import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus } from '@/lib/screen-time';
+import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp } from '@/lib/screen-time';
 
 const { width } = Dimensions.get('window');
 
@@ -23,6 +23,9 @@ const AppIcon = ({ id, color }: { id: string, color: string }) => {
     }
 };
 
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+
 export default function ShieldHub() {
     const insets = useSafeAreaInsets();
     const { blockedApps, toggleAppBlocked, isTrackingActive, dailyGoalMinutes, todayProgress } = useLumisStore();
@@ -31,21 +34,38 @@ export default function ShieldHub() {
     const [isPickerLoading, setIsPickerLoading] = useState(false);
     const [nativeAppCount, setNativeAppCount] = useState(0);
     const [shieldStatus, setShieldStatus] = useState(false);
+    const [nativeAppToggles, setNativeAppToggles] = useState<{ name: string, isEnabled: boolean }[]>([]);
+    const [showInstructions, setShowInstructions] = useState(false);
 
-    // Check permission and app count on mount
+    // Check permission and app count on focus
     useEffect(() => {
-        const checkStatus = async () => {
-            if (Platform.OS === 'ios') {
-                const status = await getScreenTimePermissionStatus();
-                setHasPermission(status);
-                if (status) {
-                    setNativeAppCount(getSelectedAppCount());
-                    setShieldStatus(isShieldActive());
-                }
-            }
-        };
-        checkStatus();
+        // Initialization logic if needed
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            const checkStatus = async () => {
+                if (Platform.OS === 'ios') {
+                    // Test bridge
+                    try {
+                        const { hello } = require('lumisscreentime');
+                        console.log('[Shield] Bridge test:', hello());
+                    } catch (e) {
+                        console.error('[Shield] Bridge test failed:', e);
+                    }
+
+                    const status = await getScreenTimePermissionStatus();
+                    setHasPermission(status);
+                    if (status) {
+                        setNativeAppCount(getSelectedAppCount());
+                        setShieldStatus(isShieldActive());
+                        setNativeAppToggles(getAppToggles());
+                    }
+                }
+            };
+            checkStatus();
+        }, [])
+    );
 
     const isGoalMet = todayProgress.lightMinutes >= dailyGoalMinutes;
     const isLocked = !isGoalMet;
@@ -57,27 +77,94 @@ export default function ShieldHub() {
 
     const handleRequestPermission = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        const result = await requestScreenTimeAuthorization();
-        setHasPermission(result);
-    };
-
-    const handleChooseApps = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setIsPickerLoading(true);
         try {
-            const result = await showAppPicker();
+            console.log('[Shield] Calling requestScreenTimeAuthorization...');
+            const result = await requestScreenTimeAuthorization();
+            console.log('[Shield] requestScreenTimeAuthorization result:', result);
+
             if (result) {
-                setNativeAppCount(getSelectedAppCount());
+                setHasPermission(true);
+                Alert.alert("Success", "Screen Time permission granted!");
+                // Proactively open the picker for the user
+                setTimeout(() => {
+                    handleChooseApps();
+                }, 500);
+            } else {
+                setHasPermission(false);
+                Alert.alert("Permission Denied", "Please enable Screen Time in Settings > Screen Time > Content & Privacy Restrictions.");
             }
+        } catch (error: any) {
+            console.error('[Shield] Permission error:', error);
+            Alert.alert("Error", `Failed to request permission: ${error?.message || 'Unknown error'}`);
         } finally {
             setIsPickerLoading(false);
         }
+    };
+
+    const handleNativeAppToggle = (name: string, isEnabled: boolean) => {
+        Haptics.selectionAsync();
+        toggleNativeApp(name, isEnabled);
+        // Refresh toggles and count
+        setNativeAppToggles(getAppToggles());
+        setNativeAppCount(getSelectedAppCount());
+
+        // If the shield is already active, we might need to re-activate to apply changes
+        if (shieldStatus) {
+            activateShield();
+        }
+    };
+
+    const handleChooseApps = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setShowInstructions(true);
+    };
+
+    const openNativePicker = async () => {
+        setShowInstructions(false);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setIsPickerLoading(true);
+        console.log('[Shield] openNativePicker called - waiting for modal to close');
+
+        // Wait for modal animation to finish
+        setTimeout(async () => {
+            try {
+                console.log('[Shield] Calling showAppPicker...');
+                const result = await showAppPicker();
+                console.log('[Shield] showAppPicker returned:', result);
+
+                if (result && result.success) {
+                    const count = result.count;
+                    const toggles = result.toggles;
+
+                    console.log(`[Shield] Selection saved. Count: ${count}, Toggles: ${toggles.length}`);
+
+                    setNativeAppCount(count);
+                    setNativeAppToggles(toggles);
+
+                    if (count === 0 && toggles.length > 0) {
+                        setNativeAppCount(toggles.length);
+                    }
+                }
+            } catch (error: any) {
+                console.error('[Shield] Picker error:', error);
+                Alert.alert("Picker Error", error?.message || "Could not open app picker");
+            } finally {
+                console.log('[Shield] openNativePicker finally');
+                setIsPickerLoading(false);
+            }
+        }, 600);
     };
 
     const handleActivateShield = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         const result = activateShield();
         setShieldStatus(result);
+        if (result) {
+            Alert.alert("Shield Active", "Selected apps are now blocked.");
+        } else {
+            Alert.alert("Shield Failed", "Could not activate the shield. Please check permissions.");
+        }
     };
 
     const handleDeactivateShield = () => {
@@ -95,7 +182,7 @@ export default function ShieldHub() {
                 <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: 20 }}>
                     <View style={styles.headerRow}>
                         <Shield size={28} color="#FFB347" fill="#FFB347" />
-                        <Text style={styles.headerTitle}>Shields</Text>
+                        <Text style={styles.headerTitle}>Shields (TEST)</Text>
                     </View>
                     <Text style={styles.headerSubtitle}>
                         Manage your distractions. Blocked apps stay locked until you get your morning light.
@@ -112,17 +199,47 @@ export default function ShieldHub() {
                             <Text style={styles.sectionTitle}>Screen Time Shield</Text>
 
                             {!hasPermission ? (
-                                <Pressable style={styles.permissionButton} onPress={handleRequestPermission}>
-                                    <LinearGradient
-                                        colors={['#FFB347', '#FF8C00']}
-                                        style={styles.permissionGradient}
+                                <View style={{ gap: 12 }}>
+                                    <Pressable
+                                        style={[styles.permissionButton, isPickerLoading && { opacity: 0.7 }]}
+                                        onPress={handleRequestPermission}
+                                        disabled={isPickerLoading}
                                     >
-                                        <Shield size={20} color="#1A1A2E" />
-                                        <Text style={styles.permissionButtonText}>Enable Screen Time Access</Text>
-                                    </LinearGradient>
-                                </Pressable>
+                                        <LinearGradient
+                                            colors={['#FFB347', '#FF8C00']}
+                                            style={styles.permissionGradient}
+                                        >
+                                            {isPickerLoading ? (
+                                                <ActivityIndicator color="#1A1A2E" size="small" />
+                                            ) : (
+                                                <>
+                                                    <Shield size={20} color="#1A1A2E" />
+                                                    <Text style={styles.permissionButtonText}>Enable Screen Time Access</Text>
+                                                </>
+                                            )}
+                                        </LinearGradient>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={() => {
+                                            setHasPermission(true);
+                                            Haptics.selectionAsync();
+                                        }}
+                                        style={{ alignSelf: 'center', marginTop: 8 }}
+                                    >
+                                        <Text style={{ color: '#666', fontSize: 12, textDecorationLine: 'underline' }}>
+                                            Debug: I've already enabled it (Bypass)
+                                        </Text>
+                                    </Pressable>
+                                </View>
                             ) : (
                                 <>
+                                    <View style={styles.reminderCard}>
+                                        <AlertCircle size={18} color="#FFB347" />
+                                        <Text style={styles.reminderText}>
+                                            <Text style={{ fontWeight: 'bold' }}>Important:</Text> Apps MUST be selected in the System Picker below to be blocked.
+                                        </Text>
+                                    </View>
+
                                     <Pressable
                                         style={styles.chooseAppsButton}
                                         onPress={handleChooseApps}
@@ -136,7 +253,7 @@ export default function ShieldHub() {
                                                 <Text style={styles.chooseAppsText}>
                                                     {nativeAppCount > 0
                                                         ? `${nativeAppCount} Apps Selected — Tap to Edit`
-                                                        : 'Choose Apps to Shield'}
+                                                        : 'Open System App Picker'}
                                                 </Text>
                                             </>
                                         )}
@@ -192,27 +309,53 @@ export default function ShieldHub() {
                         </Text>
                     </View>
 
-                    <Text style={styles.sectionTitle}>Quick Toggles</Text>
+                    <Text style={styles.sectionTitle}>
+                        {nativeAppToggles.length > 0 ? 'Shielded Apps' : 'Quick Toggles'}
+                    </Text>
 
-                    {blockedApps.map((app) => (
-                        <View key={app.id} style={styles.appRow}>
-                            <View style={styles.appIconContainer}>
-                                <AppIcon id={app.id} color="#FFF" />
+                    {nativeAppToggles.length > 0 ? (
+                        // Show actual apps from native picker
+                        nativeAppToggles.map((app, index) => (
+                            <View key={`${app.name}-${index}`} style={styles.appRow}>
+                                <View style={styles.appIconContainer}>
+                                    <Shield size={24} color="#FFF" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.appName}>{app.name}</Text>
+                                    <Text style={styles.appStatus}>
+                                        {app.isEnabled ? (isLocked ? '🔒 Managed by Shield' : '🔓 Active') : 'Shield Disabled'}
+                                    </Text>
+                                </View>
+                                <Switch
+                                    value={app.isEnabled}
+                                    onValueChange={(val) => handleNativeAppToggle(app.name, val)}
+                                    trackColor={{ false: '#333', true: '#FFB347' }}
+                                    thumbColor="#FFF"
+                                />
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.appName}>{app.name}</Text>
-                                <Text style={styles.appStatus}>
-                                    {app.isBlocked ? (isLocked ? '🔒 Locked' : '🔓 Unlocked by Sun') : 'Always Available'}
-                                </Text>
+                        ))
+                    ) : (
+                        // Fallback to mock apps
+                        blockedApps.map((app) => (
+                            <View key={app.id} style={styles.appRow}>
+                                <View style={styles.appIconContainer}>
+                                    <AppIcon id={app.id} color="#FFF" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.appName}>{app.name}</Text>
+                                    <Text style={styles.appStatus}>
+                                        {app.isBlocked ? (isLocked ? '🔒 Locked' : '🔓 Unlocked by Sun') : 'Always Available'}
+                                    </Text>
+                                </View>
+                                <Switch
+                                    value={app.isBlocked}
+                                    onValueChange={() => handleToggle(app.id)}
+                                    trackColor={{ false: '#333', true: '#FFB347' }}
+                                    thumbColor="#FFF"
+                                />
                             </View>
-                            <Switch
-                                value={app.isBlocked}
-                                onValueChange={() => handleToggle(app.id)}
-                                trackColor={{ false: '#333', true: '#FFB347' }}
-                                thumbColor="#FFF"
-                            />
-                        </View>
-                    ))}
+                        ))
+                    )}
 
                     <View style={styles.proTipContainer}>
                         <AlertCircle size={16} color="#A0A0A0" />
@@ -223,6 +366,57 @@ export default function ShieldHub() {
 
                 </ScrollView>
             </LinearGradient>
+
+            {/* Instruction Overlay Modal */}
+            <Modal
+                visible={showInstructions}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowInstructions(false)}
+            >
+                <View style={styles.instructionsOverlay}>
+                    <View style={styles.instructionsCard}>
+                        {/* Close Button */}
+                        <Pressable
+                            style={{ position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 10 }}
+                            onPress={() => setShowInstructions(false)}
+                        >
+                            <X size={20} color="#94A3B8" />
+                        </Pressable>
+
+                        <View style={styles.instructionIconCircle}>
+                            <Target size={32} color="#FFB347" />
+                        </View>
+
+                        <Text style={styles.instructionTitle}>Select Your "Big 3"</Text>
+                        <Text style={styles.instructionText}>
+                            The next screen shows all your apps. For best results, ignore the noise and focus on just 3 things:
+                        </Text>
+
+                        <View style={styles.instructionStep}>
+                            <Layers size={20} color="#FFB347" />
+                            <Text style={styles.instructionStepText}>Use <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Categories</Text> to block Social & Games in one tap.</Text>
+                        </View>
+
+                        <View style={styles.instructionStep}>
+                            <Search size={20} color="#FFB347" />
+                            <Text style={styles.instructionStepText}>Use the <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Search Bar</Text> to find specific apps quickly.</Text>
+                        </View>
+
+                        <Pressable
+                            style={styles.instructionButton}
+                            onPress={openNativePicker}
+                        >
+                            <LinearGradient
+                                colors={['#FFB347', '#FF8C00']}
+                                style={styles.instructionButtonGradient}
+                            >
+                                <Text style={styles.instructionButtonText}>I'm Ready — Select Apps</Text>
+                            </LinearGradient>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -382,5 +576,103 @@ const styles = StyleSheet.create({
     shieldButtonText: {
         fontSize: 14,
         fontFamily: 'Outfit_600SemiBold',
+    },
+    reminderCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: 'rgba(255, 179, 71, 0.1)',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 179, 71, 0.2)',
+    },
+    reminderText: {
+        flex: 1,
+        fontSize: 13,
+        fontFamily: 'Outfit_500Medium',
+        color: '#FFFFFF',
+        lineHeight: 18,
+    },
+    instructionsOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(26, 26, 46, 0.95)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    instructionsCard: {
+        width: '100%',
+        backgroundColor: '#1E293B',
+        borderRadius: 24,
+        padding: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    instructionIconCircle: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255, 179, 71, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 179, 71, 0.3)',
+    },
+    instructionTitle: {
+        fontSize: 22,
+        fontFamily: 'Outfit_600SemiBold',
+        color: '#FFF',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    instructionText: {
+        fontSize: 16,
+        fontFamily: 'Outfit_400Regular',
+        color: '#94A3B8',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 32,
+    },
+    instructionStep: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        marginBottom: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    instructionStepText: {
+        flex: 1,
+        fontSize: 15,
+        fontFamily: 'Outfit_500Medium',
+        color: '#E2E8F0',
+        marginLeft: 12,
+    },
+    instructionButton: {
+        width: '100%',
+        marginTop: 16,
+    },
+    instructionButtonGradient: {
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    instructionButtonText: {
+        fontSize: 16,
+        fontFamily: 'Outfit_600SemiBold',
+        color: '#1A1A2E',
     },
 });

@@ -1,27 +1,35 @@
 import { requireNativeModule } from 'expo-modules-core';
+import { Alert } from 'react-native';
 
-let LumisScreenTime: any = null;
+// Use lowercase name as used in most Expo projects
+let NativeModule: any = null;
 try {
-    LumisScreenTime = requireNativeModule('lumisscreentime');
-    console.log('[LumisScreenTime] Native module loaded result:', !!LumisScreenTime);
-} catch (e) {
-    console.error('[LumisScreenTime] CRITICAL: Failed to load native module:', e);
+    NativeModule = requireNativeModule('lumisscreentime');
+    console.log('[LumisScreenTime] Native module loaded:', !!NativeModule);
+
+    if (NativeModule) {
+        if (NativeModule.hello) {
+            console.log('[LumisScreenTime] Bridge check:', NativeModule.hello());
+        }
+    }
+} catch (e: any) {
+    console.error('[LumisScreenTime] Failed to load native module:', e);
 }
 
 export async function requestAuthorization(): Promise<boolean> {
-    if (!LumisScreenTime) {
-        console.error('[LumisScreenTime] requestAuthorization failed: Native module not found.');
+    if (!NativeModule) {
+        console.error('[LumisScreenTime] requestAuthorization: Native module not found.');
         return false;
     }
-    return await LumisScreenTime.requestAuthorization();
+    return await NativeModule.requestAuthorization();
 }
 
-export async function getAuthorizationStatus(): Promise<boolean> {
-    if (!LumisScreenTime || !LumisScreenTime.getAuthorizationStatus) {
-        console.warn('[LumisScreenTime] getAuthorizationStatus not available on native side');
-        return false;
+export async function getAuthorizationStatus(): Promise<string> {
+    if (!NativeModule || !NativeModule.getAuthorizationStatus) {
+        console.warn('[LumisScreenTime] getAuthorizationStatus not available');
+        return "unknown";
     }
-    return await LumisScreenTime.getAuthorizationStatus();
+    return await NativeModule.getAuthorizationStatus();
 }
 
 /**
@@ -29,11 +37,11 @@ export async function getAuthorizationStatus(): Promise<boolean> {
  * Returns true when selection is complete, false if cancelled or error.
  */
 export async function showAppPicker(): Promise<boolean> {
-    if (!LumisScreenTime || !LumisScreenTime.showAppPicker) {
+    if (!NativeModule || !NativeModule.showAppPicker) {
         console.warn('[LumisScreenTime] showAppPicker not available');
         return false;
     }
-    return await LumisScreenTime.showAppPicker();
+    return await NativeModule.showAppPicker();
 }
 
 /**
@@ -41,11 +49,11 @@ export async function showAppPicker(): Promise<boolean> {
  * Call this when morning shield should be enforced.
  */
 export function activateShield(): boolean {
-    if (!LumisScreenTime || !LumisScreenTime.activateShield) {
+    if (!NativeModule || !NativeModule.activateShield) {
         console.warn('[LumisScreenTime] activateShield not available');
         return false;
     }
-    return LumisScreenTime.activateShield();
+    return NativeModule.activateShield();
 }
 
 /**
@@ -53,50 +61,60 @@ export function activateShield(): boolean {
  * Call this when user completes their sunlight session.
  */
 export function deactivateShield(): boolean {
-    if (!LumisScreenTime || !LumisScreenTime.deactivateShield) {
+    if (!NativeModule || !NativeModule.deactivateShield) {
         console.warn('[LumisScreenTime] deactivateShield not available');
         return false;
     }
-    return LumisScreenTime.deactivateShield();
+    return NativeModule.deactivateShield();
 }
 
 /**
  * Get count of apps currently selected for shielding.
  */
 export function getSelectedAppCount(): number {
-    if (!LumisScreenTime || !LumisScreenTime.getSelectedAppCount) {
+    if (!NativeModule || !NativeModule.getSelectedAppCount) {
         return 0;
     }
-    return LumisScreenTime.getSelectedAppCount();
+    return NativeModule.getSelectedAppCount();
 }
 
 /**
  * Check if shield is currently active on any apps.
  */
 export function isShieldActive(): boolean {
-    if (!LumisScreenTime || !LumisScreenTime.isShieldActive) {
+    if (!NativeModule || !NativeModule.isShieldActive) {
         return false;
     }
-    return LumisScreenTime.isShieldActive();
+    return NativeModule.isShieldActive();
 }
 
 // Legacy functions for backwards compatibility
 export function blockAllApps(): boolean {
-    if (!LumisScreenTime) return false;
-    return LumisScreenTime.blockAllApps();
+    if (!NativeModule || !NativeModule.blockAllApps) return false;
+    return NativeModule.blockAllApps();
 }
 
 export function unblockAllApps(): boolean {
-    if (!LumisScreenTime) return false;
-    return LumisScreenTime.unblockAllApps();
+    if (!NativeModule || !NativeModule.unblockAllApps) return false;
+    return NativeModule.unblockAllApps();
 }
 
 export function areAppsBlocked(): boolean {
-    if (!LumisScreenTime) return false;
-    return LumisScreenTime.areAppsBlocked();
+    if (!NativeModule || !NativeModule.areAppsBlocked) return false;
+    return NativeModule.areAppsBlocked();
+}
+
+export function getAppToggles(): { name: string, isEnabled: boolean, isCategory?: boolean }[] {
+    if (!NativeModule || !NativeModule.getAppToggles) return [];
+    return NativeModule.getAppToggles();
+}
+
+export function toggleApp(name: string, enabled: boolean): boolean {
+    if (!NativeModule || !NativeModule.toggleApp) return false;
+    return NativeModule.toggleApp(name, enabled);
 }
 
 export function hello(): string {
-    if (!LumisScreenTime) return "Native module not linked";
-    return LumisScreenTime.hello ? LumisScreenTime.hello() : "hello function missing";
+    if (!NativeModule) return "Native module not linked";
+    return NativeModule.hello ? NativeModule.hello() : "hello function missing";
 }

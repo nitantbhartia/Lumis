@@ -26,6 +26,8 @@ import {
 } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
+import { showAppPicker, getScreenTimePermissionStatus } from '@/lib/screen-time';
+import { Platform } from 'react-native';
 
 const iconMap: Record<string, React.ReactNode> = {
   instagram: <Instagram size={28} color="#1A1A2E" strokeWidth={1.5} />,
@@ -65,8 +67,23 @@ export default function AppSelectionScreen() {
     toggleAppBlocked(appId);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // On iOS, if Screen Time is authorized, suggest selecting apps natively too
+    if (Platform.OS === 'ios') {
+      try {
+        const hasAuth = await getScreenTimePermissionStatus();
+        if (hasAuth) {
+          // Check if native selection is empty (this is a bit hard to know for sure without checking native count)
+          // For UX, just show it anyway to be sure they have what they want
+          await showAppPicker();
+        }
+      } catch (e) {
+        console.error('[AppSelection] Error checking ST status:', e);
+      }
+    }
+
     router.push('/onboarding-auth');
   };
 

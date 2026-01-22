@@ -1,46 +1,157 @@
-import * as ScreenTime from 'lumisscreentime';
-import { Platform } from 'react-native';
+import {
+    requestAuthorization as nativeRequestAuthorization,
+    getAuthorizationStatus as nativeGetAuthorizationStatus,
+    showAppPicker as nativeShowAppPicker,
+    activateShield as nativeActivateShield,
+    deactivateShield as nativeDeactivateShield,
+    getSelectedAppCount as nativeGetSelectedAppCount,
+    isShieldActive as nativeIsShieldActive,
+    getAppToggles as nativeGetAppToggles,
+    toggleApp as nativeToggleApp
+} from 'lumisscreentime';
+import { requireNativeModule } from 'expo-modules-core';
+import { Platform, Alert, Linking } from 'react-native';
 
 const isAvailable = Platform.OS === 'ios';
+
+const getModule = () => {
+    try {
+        return requireNativeModule('lumisscreentime');
+    } catch (e) {
+        return null;
+    }
+};
 
 export const getScreenTimePermissionStatus = async (): Promise<boolean> => {
     if (!isAvailable) return false;
     try {
-        const status = await ScreenTime.getAuthorizationStatus();
-        console.log('[ScreenTime] getScreenTimePermissionStatus result:', status);
-        return status;
-    } catch (error) {
+        console.log('[ScreenTime] Calling getAuthorizationStatus...');
+        if (typeof nativeGetAuthorizationStatus !== 'function') {
+            console.error('[ScreenTime] getAuthorizationStatus is NOT a function:', typeof nativeGetAuthorizationStatus);
+            return false;
+        }
+        const status = await (nativeGetAuthorizationStatus() as any);
+        console.log('[ScreenTime] getScreenTimePermissionStatus raw result:', status);
+        return status === 'approved';
+    } catch (error: any) {
         console.error('[ScreenTime] Error checking status:', error);
+        Alert.alert("Status Check Error", error?.message || "Could not get permission status");
         return false;
     }
 };
 
 export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
-    if (!isAvailable) return false;
-    try {
-        console.log('[ScreenTime] Testing native link:', ScreenTime.hello());
-        const result = await ScreenTime.requestAuthorization();
-        console.log('[ScreenTime] Authorization result:', result);
-        return result;
-    } catch (error: any) {
-        console.error('[ScreenTime] Authorization error:', error);
+    if (!isAvailable) {
+        Alert.alert("Debug", "Platform NOT supported (needs iOS)");
         return false;
     }
+    try {
+        console.log('[ScreenTime] Starting authorization flow...');
+
+        // 1. Check current status
+        const currentStatus = await getScreenTimePermissionStatus();
+        console.log('[ScreenTime] Current status:', currentStatus);
+
+        if (currentStatus) {
+            console.log('[ScreenTime] Already approved');
+            return true;
+        }
+
+        // 2. Request authorization
+        console.log('[ScreenTime] Calling native requestAuthorization...');
+
+        try {
+            const result = await nativeRequestAuthorization();
+            console.log('[ScreenTime] Native request result:', result);
+        } catch (nativeError: any) {
+            console.error('[ScreenTime] Native call failed:', nativeError);
+            throw nativeError;
+        }
+
+        // 3. Re-verify
+        const finalStatus = await getScreenTimePermissionStatus();
+        return finalStatus;
+    } catch (error: any) {
+        console.error('[ScreenTime] Authorization flow error:', error);
+        Alert.alert("Flow Error", error?.message || "Flow failed");
+        return await getScreenTimePermissionStatus();
+    }
+};
+
+/**
+ * Emergency debug bypass for permission check
+ */
+export const debugForcePermission = (): boolean => {
+    console.log('[ScreenTime] DEBUG FORCE PERMISSION CALLED');
+    return true;
 };
 
 /**
  * Present the iOS FamilyActivityPicker for users to select apps to shield.
  * This shows the native Apple picker UI.
  */
-export const showAppPicker = async (): Promise<boolean> => {
-    if (!isAvailable) return false;
+export interface PickerResult {
+    success: boolean;
+    count: number;
+    toggles: { name: string; isEnabled: boolean; isCategory?: boolean }[];
+}
+
+export const showAppPicker = async (): Promise<PickerResult> => {
+    const defaultResult = { success: false, count: 0, toggles: [] };
+    if (!isAvailable) return defaultResult;
     try {
-        const result = await ScreenTime.showAppPicker();
-        console.log('[ScreenTime] showAppPicker result:', result);
-        return result;
-    } catch (error) {
+        console.log('[ScreenTime] Calling native showAppPicker...');
+        let result: any = null;
+
+        // 1. Try named import
+        if (typeof nativeShowAppPicker === 'function') {
+            console.log('[ScreenTime] Using named import');
+            result = await nativeShowAppPicker();
+        }
+        // 2. Try direct module access
+        else {
+            const mod = getModule();
+            console.log('[ScreenTime] Direct module keys:', mod ? Object.keys(mod) : 'null');
+            if (mod && typeof mod.showAppPicker === 'function') {
+                console.log('[ScreenTime] Using direct module access');
+                result = await mod.showAppPicker();
+            }
+        }
+
+        if (!result && result !== false) {
+            const mod = getModule();
+            const errorMsg = `showAppPicker is NOT available (Import: ${typeof nativeShowAppPicker}, Module: ${mod ? 'Found' : 'Null'})`;
+            console.error('[ScreenTime]', errorMsg);
+            // Alert.alert("Bridge Error", errorMsg); // Suppress
+            return defaultResult;
+        }
+
+        console.log('[ScreenTime] Raw result:', result);
+
+        // Handle legacy boolean return
+        if (typeof result === 'boolean') {
+            if (result) {
+                const count = getSelectedAppCount();
+                const toggles = getAppToggles();
+                return { success: true, count, toggles };
+            }
+            return defaultResult;
+        }
+
+        // Handle new object return
+        if (result && typeof result === 'object') {
+            return {
+                success: result.success ?? false,
+                count: result.count ?? 0,
+                toggles: result.toggles ?? []
+            };
+        }
+
+        return defaultResult;
+    } catch (error: any) {
         console.error('[ScreenTime] Error showing app picker:', error);
-        return false;
+        Alert.alert("Native Picker Error", error?.message || "Unknown error");
+        return defaultResult;
     }
 };
 
@@ -51,7 +162,7 @@ export const showAppPicker = async (): Promise<boolean> => {
 export const activateShield = (): boolean => {
     if (!isAvailable) return false;
     try {
-        const result = ScreenTime.activateShield();
+        const result = nativeActivateShield();
         console.log('[ScreenTime] activateShield result:', result);
         return result;
     } catch (error) {
@@ -67,11 +178,37 @@ export const activateShield = (): boolean => {
 export const deactivateShield = (): boolean => {
     if (!isAvailable) return false;
     try {
-        const result = ScreenTime.deactivateShield();
+        const result = nativeDeactivateShield();
         console.log('[ScreenTime] deactivateShield result:', result);
         return result;
     } catch (error) {
         console.error('[ScreenTime] Error deactivating shield:', error);
+        return false;
+    }
+};
+
+/**
+ * Get the list of apps selected in the native picker and their status
+ */
+export const getAppToggles = (): { name: string, isEnabled: boolean, isCategory?: boolean }[] => {
+    if (!isAvailable) return [];
+    try {
+        return nativeGetAppToggles();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting app toggles:', error);
+        return [];
+    }
+};
+
+/**
+ * Update an app's toggle state in the native store
+ */
+export const toggleNativeApp = (name: string, enabled: boolean): boolean => {
+    if (!isAvailable) return false;
+    try {
+        return nativeToggleApp(name, enabled);
+    } catch (error) {
+        console.error('[ScreenTime] Error toggling native app:', error);
         return false;
     }
 };
@@ -82,7 +219,7 @@ export const deactivateShield = (): boolean => {
 export const getSelectedAppCount = (): number => {
     if (!isAvailable) return 0;
     try {
-        return ScreenTime.getSelectedAppCount();
+        return nativeGetSelectedAppCount();
     } catch (error) {
         console.error('[ScreenTime] Error getting app count:', error);
         return 0;
@@ -95,7 +232,7 @@ export const getSelectedAppCount = (): number => {
 export const isShieldActive = (): boolean => {
     if (!isAvailable) return false;
     try {
-        return ScreenTime.isShieldActive();
+        return nativeIsShieldActive();
     } catch (error) {
         console.error('[ScreenTime] Error checking shield status:', error);
         return false;

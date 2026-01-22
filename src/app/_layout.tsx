@@ -10,6 +10,7 @@ import { Syne_700Bold, Syne_800ExtraBold } from '@expo-google-fonts/syne';
 import { useEffect } from 'react';
 import { Linking } from 'react-native';
 import { initRevenueCat } from '@/lib/revenuecat';
+import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -130,7 +131,9 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
           <StatusBar style="light" />
-          <RootLayoutNav />
+          <GlobalErrorBoundary>
+            <RootLayoutNav />
+          </GlobalErrorBoundary>
         </KeyboardProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>

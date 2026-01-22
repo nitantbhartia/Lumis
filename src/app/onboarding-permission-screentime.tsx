@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Clock } from 'lucide-react-native';
-import { requestScreenTimeAuthorization } from '@/lib/screen-time';
+import { requestScreenTimeAuthorization, showAppPicker } from '@/lib/screen-time';
 
 export default function OnboardingPermissionScreenTimeScreen() {
     const router = useRouter();
@@ -19,12 +19,20 @@ export default function OnboardingPermissionScreenTimeScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         try {
-            await requestScreenTimeAuthorization();
+            const authResult = await requestScreenTimeAuthorization();
+            console.log('[Screen Time Permission] Auth Result:', authResult);
+
+            if (authResult) {
+                // If authorized, immediately show the app picker
+                const pickerResult = await showAppPicker();
+                console.log('[Screen Time Permission] Picker Result:', pickerResult);
+            }
         } catch (e) {
             console.log('[Screen Time Permission] Error:', e);
+        } finally {
+            setIsRequesting(false);
+            router.push('/onboarding-permission-notifications');
         }
-
-        router.push('/onboarding-permission-notifications');
     };
 
     const handleBack = () => {

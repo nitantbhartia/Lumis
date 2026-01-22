@@ -17,7 +17,7 @@ import { Sun, Pause, Play, X, MapPin, Zap } from 'lucide-react-native';
 import { calculateVitaminD, calculateLightQuality } from '@/lib/bio-metrics';
 import Svg, { Circle, Line, Text as SvgText, G, Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { deactivateShield } from '@/lib/screen-time';
+import { deactivateShield, activateShield } from '@/lib/screen-time';
 import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
 
 const { width, height } = Dimensions.get('window');
@@ -152,6 +152,15 @@ export default function TrackingScreen() {
       -1,
       true
     );
+
+    // Activate shields on selected apps at session start
+    if (Platform.OS === 'ios') {
+      console.log('[Tracking] Activating app shields');
+      const success = activateShield();
+      if (!success) {
+        console.error('[Tracking] Shield activation returned false');
+      }
+    }
 
     // Get location info
     (async () => {

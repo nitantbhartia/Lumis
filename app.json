@@ -27,7 +27,10 @@
         "com.apple.developer.applesignin": [
           "Default"
         ],
-        "aps-environment": "development"
+        "aps-environment": "development",
+        "com.apple.security.application-groups": [
+          "group.com.nitant.lumis"
+        ]
       }
     },
     "android": {

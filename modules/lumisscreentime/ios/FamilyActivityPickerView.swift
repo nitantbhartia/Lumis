@@ -65,17 +65,52 @@ struct FamilyActivityPickerView: View {
     
     private func saveSelection() {
         let encoder = PropertyListEncoder()
+        let sharedDefaults = UserDefaults(suiteName: "group.com.nitant.lumis")
+        
+        // 1. Save the full selection for system use
         if let data = try? encoder.encode(selection) {
-            UserDefaults.standard.set(data, forKey: "LumisShieldedApps")
+            sharedDefaults?.set(data, forKey: "LumisShieldedApps")
             NSLog("[FamilyActivityPicker] Saved selection with \(selection.applicationTokens.count) apps")
         }
+        
+        // 2. Extract and save individual app details for the React Native UI
+        // This allows us to show a list of toggles in the app
+        var appsMetadata: [[String: Any]] = []
+        
+        // We use applicationTokens directly if we want to be safe, 
+        // but getting names requires iterating through the selection.applications
+        for app in selection.applications {
+            if let tokenData = try? encoder.encode(app.token) {
+                appsMetadata.append([
+                    "name": app.localizedDisplayName ?? "Unknown App",
+                    "token": tokenData,
+                    "isEnabled": true
+                ])
+            }
+        }
+        
+        // Also handle categories if any
+        for category in selection.categories {
+            if let tokenData = try? encoder.encode(category.token) {
+                appsMetadata.append([
+                    "name": category.localizedDisplayName ?? "Unknown Category",
+                    "token": tokenData,
+                    "isEnabled": true,
+                    "isCategory": true
+                ])
+            }
+        }
+        
+        sharedDefaults?.set(appsMetadata, forKey: "LumisAppMetadata")
+        NSLog("[FamilyActivityPicker] Saved \(appsMetadata.count) app metadata items for UI")
     }
     
     private func loadSelection() {
-        if let data = UserDefaults.standard.data(forKey: "LumisShieldedApps"),
+        let sharedDefaults = UserDefaults(suiteName: "group.com.nitant.lumis")
+        if let data = sharedDefaults?.data(forKey: "LumisShieldedApps"),
            let decoded = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: data) {
             selection = decoded
-            NSLog("[FamilyActivityPicker] Loaded selection with \(selection.applicationTokens.count) apps")
+            NSLog("[FamilyActivityPicker] Loaded selection with \(selection.applicationTokens.count) apps from shared group")
         }
     }
 }
@@ -109,34 +144,167 @@ extension Color {
 
 // UIKit hosting controller for presenting from React Native
 @available(iOS 16.0, *)
-class FamilyActivityPickerHostingController: UIHostingController<AnyView> {
+class FamilyActivityPickerHostingController: UIHostingController<FamilyActivityPickerWrapper> {
     var onDismiss: (() -> Void)?
     var onSelectionComplete: ((FamilyActivitySelection) -> Void)?
     
+    private var selectionModel = SelectionModel()
+    
     init() {
-        let view = AnyView(EmptyView())
-        super.init(rootView: view)
+        let model = SelectionModel()
+        self.selectionModel = model
         
-        let pickerView = FamilyActivityPickerView(
-            isPresented: Binding(
-                get: { true },
-                set: { newValue in
-                    if !newValue {
-                        self.dismiss(animated: true) {
-                            self.onDismiss?()
-                        }
-                    }
-                }
-            ),
-            onSelectionComplete: { selection in
-                self.onSelectionComplete?(selection)
-            }
-        )
-        self.rootView = AnyView(pickerView)
-        self.modalPresentationStyle = .pageSheet
+        let wrapper = FamilyActivityPickerWrapper(model: model)
+        super.init(rootView: wrapper)
+        
+        model.onDone = { [weak self] selection in
+            // USE THE SELECTION PARAMETER - this is what the SwiftUI view passes
+            let appCount = selection.applicationTokens.count
+            let catCount = selection.categoryTokens.count
+            NSLog("[HostingController] onDone - RECEIVED selection with Apps: \(appCount), Categories: \(catCount)")
+            self?.onSelectionComplete?(selection)
+            self?.dismiss(animated: true)
+        }
+        model.onCancel = { [weak self] in
+            self?.onDismiss?()
+            self?.dismiss(animated: true)
+        }
+        
+        self.modalPresentationStyle = .formSheet
     }
     
     @MainActor required dynamic init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+@available(iOS 16.0, *)
+class SelectionModel: ObservableObject {
+    @Published var selection = FamilyActivitySelection()
+    var onDone: ((FamilyActivitySelection) -> Void)?
+    var onCancel: (() -> Void)?
+    
+    private func getDefaults() -> UserDefaults {
+        if let defaults = UserDefaults(suiteName: "group.com.nitant.lumis") {
+            return defaults
+        }
+        return UserDefaults.standard
+    }
+    
+    init() {
+        // Load existing selection
+        let defaults = UserDefaults.standard // Use standard for now to match Module
+        if let data = defaults.data(forKey: "LumisShieldedApps"),
+           let decoded = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: data) {
+            selection = decoded
+            print("[SelectionModel] Loaded selection: \(selection.applicationTokens.count) apps")
+        }
+    }
+    
+    func save() {
+        let defaults = UserDefaults.standard // Use standard for now
+        
+        // 1. Save raw selection for re-loading the picker next time
+        if let data = try? PropertyListEncoder().encode(selection) {
+            defaults.set(data, forKey: "LumisShieldedApps")
+        }
+        
+        // 2. Save metadata for UI (JS side)
+        // We replicate this here just in case, but the Module also does it.
+        // Doing it here ensures the "View" has logic to persist its own state.
+        
+        var appsMetadata: [[String: Any]] = []
+        let encoder = PropertyListEncoder()
+        
+        print("[SelectionModel] Saving selection: \(selection.applicationTokens.count) apps")
+        
+        for app in selection.applications {
+            if let tokenData = try? encoder.encode(app.token) {
+                appsMetadata.append([
+                    "name": app.localizedDisplayName ?? "Unknown App",
+                    "token": tokenData,
+                    "isEnabled": true
+                ])
+            }
+        }
+        
+        for category in selection.categories {
+            if let tokenData = try? encoder.encode(category.token) {
+                appsMetadata.append([
+                    "name": category.localizedDisplayName ?? "Category",
+                    "token": tokenData,
+                    "isEnabled": true,
+                    "isCategory": true
+                ])
+            }
+        }
+        
+        defaults.set(appsMetadata, forKey: "LumisAppMetadata")
+        defaults.synchronize()
+        print("[SelectionModel] Saved \(appsMetadata.count) items to UserDefaults.standard")
+    }
+}
+
+@available(iOS 16.0, *)
+struct FamilyActivityPickerWrapper: View {
+    @ObservedObject var model: SelectionModel
+    @State private var localSelection = FamilyActivitySelection()
+    @State private var showDebugAlert = false
+    @State private var debugMessage = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Image(systemName: "shield.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.orange)
+                    
+                    Text("Select Apps to Block")
+                        .font(.title2.bold())
+                    
+                    Text("Tap categories or search for specific apps.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding(.vertical, 20)
+                
+                FamilyActivityPicker(selection: $localSelection)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        model.onCancel?()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        let appCount = localSelection.applicationTokens.count
+                        let catCount = localSelection.categoryTokens.count
+                        debugMessage = "Apps: \(appCount), Categories: \(catCount)"
+                        
+                        // Show debug alert first
+                        showDebugAlert = true
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .alert("Selection Debug", isPresented: $showDebugAlert) {
+                Button("OK") {
+                    // Now actually save and dismiss
+                    model.selection = localSelection
+                    model.save()
+                    model.onDone?(localSelection)
+                }
+            } message: {
+                Text(debugMessage)
+            }
+        }
+        .onAppear {
+            localSelection = model.selection
+        }
     }
 }
