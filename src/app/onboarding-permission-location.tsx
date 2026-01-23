@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, MapPin } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 export default function OnboardingPermissionLocationScreen() {
     const router = useRouter();
@@ -76,18 +77,15 @@ export default function OnboardingPermissionLocationScreen() {
 
                     {/* Buttons */}
                     <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.buttonsContainer}>
-                        <Pressable onPress={handleAllow} style={styles.allowButtonContainer}>
-                            <LinearGradient
-                                colors={['#FFB347', '#FF8C00']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.allowButton}
-                            >
-                                <Text style={styles.allowButtonText}>
-                                    {isRequesting ? 'Requesting...' : 'Allow Location Access'}
-                                </Text>
-                            </LinearGradient>
-                        </Pressable>
+                        <View style={styles.allowButtonContainer}>
+                            <LumisHeroButton
+                                title={isRequesting ? 'Requesting...' : 'Allow Location Access'}
+                                onPress={handleAllow}
+                                icon={<MapPin size={20} color="#1A1A2E" strokeWidth={2.5} />}
+                                loading={isRequesting}
+                                disabled={isRequesting}
+                            />
+                        </View>
                     </Animated.View>
                 </View>
             </LinearGradient>

@@ -40,10 +40,10 @@ export default function IndexScreen() {
       return () => clearTimeout(timer);
     }
 
-    // If authenticated but hasn't completed onboarding, go to onboarding
+    // If authenticated but hasn't completed onboarding, go to new onboarding flow
     if (isAuthenticated && !hasCompletedOnboarding) {
       const timer = setTimeout(() => {
-        router.replace('/onboarding');
+        router.replace('/onboarding-splash');
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -147,18 +147,18 @@ export default function IndexScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
-                    paddingVertical: 18,
-                    borderRadius: 16,
+                    paddingVertical: 22,
+                    borderRadius: 20,
                     shadowColor: '#FF8C00',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 12,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 16,
+                    elevation: 10,
                   }}
                 >
                   <Text
-                    className="text-lumis-night text-center text-lg"
-                    style={{ fontFamily: 'Outfit_600SemiBold' }}
+                    className="text-lumis-night text-center text-xl font-bold uppercase tracking-widest"
+                    style={{ fontFamily: 'Outfit_700Bold' }}
                   >
                     Get Started
                   </Text>

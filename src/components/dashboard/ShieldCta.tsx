@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Sun, ArrowRight, Lock, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Film, Ghost, LayoutGrid } from 'lucide-react-native';
+import { Sun, ArrowRight, Lock, Shield, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Film, Ghost, LayoutGrid, Users, Gamepad2, Play, Palette, Clock, GraduationCap, ShoppingBag, Plane, Settings, Activity, BookOpen } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -15,7 +16,7 @@ if (Platform.OS === 'android') {
 interface ShieldCtaProps {
     onStartTracking: () => void;
     onManageShield: () => void;
-    blockedApps: Array<{ name: string; isBlocked: boolean; id?: string }>;
+    blockedApps: Array<{ name: string; isBlocked: boolean; id?: string; isCategory?: boolean }>;
     isCheckingLux: boolean;
     isGoalMet: boolean;
     progressPercent: number; // 0-100
@@ -25,6 +26,7 @@ const getAppIcon = (appName: string, size: number = 32, color?: string) => {
     const name = appName.toLowerCase();
     const iconColor = color || (name.includes('tik') ? '#000' : name.includes('insta') ? '#C13584' : '#666');
 
+    // Specific app icons
     if (name.includes('insta')) return <Instagram size={size} color={iconColor} />;
     if (name.includes('tik')) return <Video size={size} color={iconColor} />;
     if (name.includes('twitter') || name.includes('x')) return <Twitter size={size} color={iconColor} />;
@@ -34,6 +36,20 @@ const getAppIcon = (appName: string, size: number = 32, color?: string) => {
     if (name.includes('snap')) return <Ghost size={size} color={iconColor} />;
     if (name.includes('netflix')) return <Film size={size} color={iconColor} />;
 
+    // Category specific icons
+    if (name.includes('social')) return <Users size={size} color={iconColor} />;
+    if (name.includes('game')) return <Gamepad2 size={size} color={iconColor} />;
+    if (name.includes('entertain')) return <Play size={size} color={iconColor} />;
+    if (name.includes('creativ')) return <Palette size={size} color={iconColor} />;
+    if (name.includes('productiv') || name.includes('finance')) return <Clock size={size} color={iconColor} />;
+    if (name.includes('educat')) return <GraduationCap size={size} color={iconColor} />;
+    if (name.includes('shop') || name.includes('food')) return <ShoppingBag size={size} color={iconColor} />;
+    if (name.includes('travel')) return <Plane size={size} color={iconColor} />;
+    if (name.includes('utilit')) return <Settings size={size} color={iconColor} />;
+    if (name.includes('health') || name.includes('fit')) return <Activity size={size} color={iconColor} />;
+    if (name.includes('read') || name.includes('info')) return <BookOpen size={size} color={iconColor} />;
+
+    if (name.includes('layer') || name.includes('category')) return <Shield size={size} color={iconColor} />;
     return <Lock size={size} color={iconColor} />;
 };
 
@@ -60,92 +76,47 @@ export const ShieldCta = ({
     // Design: "Monochrome or dimmed. As progress approaches 100%, icons animate to full color."
     const isPoweredUp = progressPercent >= 100;
 
+    // Calculate counts
+    const appsCount = activeApps.filter(a => !a.isCategory).length;
+    const categoriesCount = activeApps.filter(a => a.isCategory).length;
+    const categories = activeApps.filter(a => a.isCategory);
+
+    const getCategoryNamesPart = () => {
+        if (categoriesCount === 1) return categories[0].name;
+        if (categoriesCount === 2) return `${categories[0].name} & ${categories[1].name}`;
+        return `${categoriesCount} categories`;
+    };
+
+    const getCompactLabel = () => {
+        const catPart = getCategoryNamesPart();
+        if (categoriesCount > 0 && appsCount > 0) return `${catPart}, ${appsCount} app${appsCount > 1 ? 's' : ''}`;
+        if (categoriesCount > 0) return catPart;
+        return `${appsCount} app${appsCount > 1 ? 's' : ''}`;
+    };
+
+    const getCtaLabel = () => {
+        if (isCheckingLux) return 'Checking light...';
+        return 'Start Morning Light';
+    };
+
+    const getLockedAppsLabel = () => {
+        if (!activeApps.length || isGoalMet) return undefined;
+        return `${activeApps.length} apps shielded`;
+    };
+
     return (
         <View style={styles.container}>
-            {/* 1. Shielded Apps Interactive Stack */}
-            {activeApps.length > 0 && !isGoalMet && (
-                <Pressable
-                    style={[styles.stackContainer, isAppsExpanded && styles.stackContainerExpanded]}
-                    onPress={toggleExpand}
-                >
-                    {isAppsExpanded ? (
-                        // EXPANDED GRID VIEW
-                        <View style={styles.expandedGrid}>
-                            <View style={styles.expandedHeader}>
-                                <Text style={styles.expandedTitle}>Shielded Apps</Text>
-                                <Pressable style={styles.manageButton} onPress={onManageShield}>
-                                    <Text style={styles.manageButtonText}>Manage</Text>
-                                </Pressable>
-                            </View>
-                            <View style={styles.appGrid}>
-                                {activeApps.map((app, index) => (
-                                    <View key={index} style={styles.gridItem}>
-                                        <View style={styles.navIconWrapper}>
-                                            {getAppIcon(app.name, 28, isPoweredUp ? undefined : '#888')}
-                                        </View>
-                                        <Text style={styles.gridAppName} numberOfLines={1}>
-                                            {app.name}
-                                        </Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    ) : (
-                        // COLLAPSED STACK VIEW
-                        <View style={styles.collapsedStack}>
-                            <View style={styles.iconStack}>
-                                {activeApps.slice(0, 4).map((app, index) => (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.stackIconWrapper,
-                                            {
-                                                zIndex: 4 - index,
-                                                marginLeft: index === 0 ? 0 : -12,
-                                                opacity: isPoweredUp ? 1 : 0.7
-                                            }
-                                        ]}
-                                    >
-                                        {getAppIcon(app.name, 24, isPoweredUp ? undefined : '#555')}
-                                    </View>
-                                ))}
-                                {activeApps.length > 4 && (
-                                    <View style={[styles.stackIconWrapper, { zIndex: 0, marginLeft: -12, backgroundColor: '#EEE' }]}>
-                                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#666' }}>+{activeApps.length - 4}</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <Text style={styles.stackLabel}>
-                                {isPoweredUp ? "Apps Unlocked" : `${activeApps.length} apps locked`}
-                            </Text>
-                        </View>
-                    )}
-                </Pressable>
-            )}
-
-            {/* 2. Main CTA Button */}
-            <Pressable
-                style={({ pressed }) => [styles.mainCta, pressed && styles.ctaPressed]}
-                onPress={onStartTracking}
-            >
-                <LinearGradient
-                    colors={['#FFC77D', '#FF8C00']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={styles.ctaGradient}
-                >
-                    <View style={styles.ctaContent}>
-                        <Sun size={24} color="#1A1A2E" fill="#1A1A2E" />
-                        <Text style={styles.ctaText}>
-                            {isCheckingLux ? 'Checking light...' :
-                                activeApps.length > 0 && !isGoalMet
-                                    ? `Unlock ${activeApps.length} apps`
-                                    : 'Get your morning light'}
-                        </Text>
-                    </View>
-                    {!isCheckingLux && <ArrowRight size={24} color="#1A1A2E" strokeWidth={2} />}
-                </LinearGradient>
-            </Pressable>
+            {/* 2. Main CTA Button (Consolidated) */}
+            <View style={styles.mainCta}>
+                <LumisHeroButton
+                    title={getCtaLabel()}
+                    subLabel={getLockedAppsLabel()}
+                    onPress={onStartTracking}
+                    icon={!isCheckingLux ? <Sun size={24} color="#1A1A2E" fill="#1A1A2E" /> : null}
+                    loading={isCheckingLux}
+                    disabled={isCheckingLux}
+                />
+            </View>
         </View>
     );
 };
@@ -153,26 +124,26 @@ export const ShieldCta = ({
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        paddingHorizontal: 20, // Match Dashboard padding
-        gap: 16,
-        marginBottom: 40,
+        gap: 12, // Reduced from 16
+        marginBottom: 16, // Reduced from 32 (padding handled by safe area or parent list)
     },
     // Stack Styles
     stackContainer: {
-        backgroundColor: 'rgba(255,255,255,0.6)',
-        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.8)',
         overflow: 'hidden',
+        marginHorizontal: 8,
     },
     stackContainerExpanded: {
-        backgroundColor: 'rgba(255,255,255,0.9)',
+        backgroundColor: 'rgba(255,255,255,1)',
     },
     collapsedStack: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
+        paddingVertical: 14,
         gap: 12,
     },
     iconStack: {
@@ -180,50 +151,50 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     stackIconWrapper: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
+        width: 40,
+        height: 40,
+        borderRadius: 14,
         backgroundColor: '#FFF',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: '#EEE',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     stackLabel: {
-        fontSize: 14,
-        fontFamily: 'Outfit_500Medium',
-        color: '#4A5568',
+        fontSize: 15,
+        fontFamily: 'Outfit_600SemiBold',
+        color: '#1A1A2E',
     },
 
     // Expanded View
     expandedGrid: {
-        padding: 20,
+        padding: 24,
     },
     expandedHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
     },
     expandedTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'Outfit_700Bold',
         color: '#1A1A2E',
     },
     manageButton: {
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+        backgroundColor: '#F0F0F0',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 14,
     },
     manageButtonText: {
-        fontSize: 12,
-        fontFamily: 'Outfit_600SemiBold',
-        color: '#666',
+        fontSize: 13,
+        fontFamily: 'Outfit_700Bold',
+        color: '#FF8C00',
     },
     appGrid: {
         flexDirection: 'row',
@@ -232,37 +203,37 @@ const styles = StyleSheet.create({
     },
     gridItem: {
         alignItems: 'center',
-        width: '20%', // approx 4 per row
-        gap: 6,
+        width: '20%',
+        gap: 8,
     },
     navIconWrapper: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        backgroundColor: '#F5F5F5',
+        width: 52,
+        height: 52,
+        borderRadius: 18,
+        backgroundColor: '#F8F8F8',
         alignItems: 'center',
         justifyContent: 'center',
     },
     gridAppName: {
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: 'Outfit_500Medium',
-        color: '#666',
+        color: '#444',
         textAlign: 'center',
     },
 
     // CTA Button
     mainCta: {
         width: '100%',
-        height: 64,
+        height: 80,
         borderRadius: 32,
         shadowColor: '#FF8C00',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 12,
     },
     ctaPressed: {
-        transform: [{ scale: 0.98 }],
+        transform: [{ scale: 0.95 }],
     },
     ctaGradient: {
         flex: 1,
@@ -270,17 +241,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 24,
+        paddingHorizontal: 32,
     },
     ctaContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 16,
     },
     ctaText: {
-        fontSize: 18,
-        fontFamily: 'Outfit_700Bold',
+        fontSize: 22,
+        fontFamily: 'Outfit_800ExtraBold',
         color: '#1A1A2E',
-        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+        letterSpacing: 2,
     },
 });

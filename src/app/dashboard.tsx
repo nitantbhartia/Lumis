@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Dimensions, Platform, UIManager } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Dimensions, Platform, UIManager, LayoutAnimation } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing, interpolate } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing, interpolate } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Info, Sun, Shield, Lock } from 'lucide-react-native';
 
@@ -19,8 +19,9 @@ import CalendarModal from '../components/CalendarModal';
 import EmergencyUnlockModal from '../components/EmergencyUnlockModal';
 import UserSettingsModal from '../components/UserSettingsModal';
 
+import { useMissionBriefing } from '@/lib/hooks/useMissionBriefing';
 import { MissionBriefingCard } from '@/components/dashboard/MissionBriefingCard';
-import { DaylightBar } from '@/components/dashboard/DaylightBar';
+import { MorningLightSlider } from '@/components/dashboard/MorningLightSlider';
 import { ShieldCta } from '@/components/dashboard/ShieldCta';
 
 const { width } = Dimensions.get('window');
@@ -57,15 +58,21 @@ export default function DashboardScreen() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const hoursSinceSunrise = Math.max(0, (currentMinutes - sunriseMinutes) / 60);
 
-  const { status } = useSmartEnvironment();
+  const { status, lux } = useSmartEnvironment();
   const isOutdoors = status === 'OUTDOORS';
   const pulseOpacity = useSharedValue(0.5);
+  const timerScale = useSharedValue(1);
 
-  const displayName = formatFirstName(userName || 'nitant bhartia');
+  const formattedName = formatFirstName(userName);
+  const displayName = formattedName || 'Nitant';
   const initials = displayName ? displayName.charAt(0).toUpperCase() : 'N';
 
-  const progressPercent = Math.min((todayProgress.lightMinutes / dailyGoalMinutes) * 100, 100);
-  const isGoalMet = todayProgress.lightMinutes >= dailyGoalMinutes;
+  // Mission & Dynamic Goal - Moved up to influence progress calculation
+  const mission = useMissionBriefing(weather.condition, hoursSinceSunrise, currentStreak, userName, dailyGoalMinutes);
+  const currentSessionGoal = mission.durationValue; // Adjusted goal
+
+  const progressPercent = Math.min((todayProgress.lightMinutes / currentSessionGoal) * 100, 100);
+  const isGoalMet = todayProgress.lightMinutes >= currentSessionGoal;
 
   useEffect(() => {
     if (isOutdoors) {
@@ -79,38 +86,41 @@ export default function DashboardScreen() {
     }
   }, [isOutdoors]);
 
+  // Animate layout changes when goal updates (e.g. weather clears)
+  // Animate layout changes when goal updates (e.g. weather clears)
+  useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+
+    // Haptic feedback and visual scale for goal change
+    Haptics.selectionAsync();
+    timerScale.value = withSequence(
+      withTiming(1.1, { duration: 150, easing: Easing.out(Easing.ease) }),
+      withTiming(1, { duration: 300, easing: Easing.out(Easing.bounce) })
+    );
+  }, [currentSessionGoal, mission.isAdjusted]);
+
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
     shadowOpacity: interpolate(pulseOpacity.value, [0.5, 1], [0.2, 0.6]),
   }));
 
+  const timerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: timerScale.value }]
+  }));
+
+  // Haptic Feedback for High Lux Zones
+  useEffect(() => {
+    if (lux > 10000 && isOutdoors) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [lux, isOutdoors]);
+
   const handleStartTracking = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsCheckingLux(true);
-
-    try {
-      const detectedLux = await checkLux();
-
-      if (detectedLux !== null) {
-        if (detectedLux >= 5000) {
-          incrementPassiveSuccess();
-          router.push('/tracking');
-        } else if (detectedLux < 500) {
-          incrementPassiveFail();
-          router.push('/compass-lux?fallback=true');
-        } else {
-          router.push('/compass-lux');
-        }
-      } else {
-        router.push('/compass-lux');
-      }
-    } catch (error) {
-      console.error('[Dashboard] Lux check error:', error);
-      router.push('/compass-lux');
-    } finally {
-      setIsCheckingLux(false);
-    }
+    router.push('/tracking');
   };
+
+  const windowStatus = hoursSinceSunrise < 2 ? "OPTIMAL" : hoursSinceSunrise < 4 ? "GOOD" : "CLOSING";
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
@@ -144,73 +154,48 @@ export default function DashboardScreen() {
 
           {/* Mission Briefing Card */}
           <MissionBriefingCard
-            weatherCondition={weather.condition}
-            hoursSinceSunrise={hoursSinceSunrise}
-            streak={currentStreak}
-            userName={userName}
+            mission={mission}
+            windowStatus={windowStatus}
           />
         </View>
 
-        {/* Action Content Area */}
+        {/* ACTION SCROLL AREA - Wrapped in ScrollView to prevent CTA cut-off */}
+        {/* ACTION SCROLL AREA */}
         <ScrollView
           style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
         >
-          {/* Active Tracking Progress Bar (Pill from IMG_9295) */}
-          <View style={styles.progressContainer}>
-            <Animated.View style={[styles.progressBar, isOutdoors && styles.progressBarPulse, isOutdoors && pulseStyle]}>
-              {progressPercent > 0 && (
-                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
-              )}
-            </Animated.View>
-          </View>
-
           {/* Morning Light Section */}
           <View style={styles.morningLightSection}>
             <View style={styles.morningLightHeader}>
-              <View>
-                <View style={styles.morningLightTitleRow}>
-                  <Text style={styles.morningLightTitle}>Morning Light</Text>
-                  <Pressable
-                    onPress={() => setShowMorningLightInfo(true)}
-                    hitSlop={10}
+              <View style={{ flex: 1, alignItems: 'center', marginTop: 10 }}>
+                {/* Timer Display */}
+                <Animated.View style={[{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }, timerAnimatedStyle]}>
+                  <Animated.Text
+                    sharedTransitionTag="sessionTimer"
+                    style={[styles.recommendedTimeValue, { fontSize: 80, lineHeight: 85, color: '#1A1A2E' }]}
                   >
-                    <Info size={18} color="#1A1A2E" style={{ marginLeft: 6 }} />
-                  </Pressable>
-                </View>
-                <Text style={styles.morningLightSubtitle}>
-                  RECOMMENDED FOR IMPROVED ENERGY, MOOD,{'\n'}AND SLEEP
-                </Text>
-              </View>
-              <View style={styles.recommendedTimeContainer}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {isGoalMet ? (
-                    <Shield size={24} color="#FFB347" fill="#FFB347" />
-                  ) : (
-                    <Lock size={24} color="#999" />
-                  )}
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <Text style={styles.recommendedTimeValue}>{dailyGoalMinutes}</Text>
-                    <Text style={styles.recommendedTimeUnit}>MIN</Text>
-                  </View>
-                </View>
+                    {currentSessionGoal}
+                  </Animated.Text>
+                  <Text style={[styles.recommendedTimeUnit, { fontSize: 20, marginBottom: 16 }]}>MIN</Text>
+                </Animated.View>
+
+                {mission.isAdjusted && (
+                  <Text style={{ fontSize: 13, color: '#D84315', fontFamily: 'Outfit_500Medium', marginTop: -8 }}>
+                    Adjusted for Overcast
+                  </Text>
+                )}
               </View>
             </View>
           </View>
 
-          {/* Flexible Spacing */}
-          <View style={{ flex: 1 }} />
-
-          {/* Daylight Bar Section */}
-          <DaylightBar />
-
-          {/* Equal spacing below weather bar */}
-          <View style={{ flex: 1 }} />
+          {/* Morning Light Slider (Dynamic Goal) */}
+          <MorningLightSlider goalMinutes={currentSessionGoal} luxScore={lux} />
         </ScrollView>
 
-        {/* Fixed CTA with Integrated App Unlock */}
-        <View style={[styles.fixedCtaContainer, { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 1000 }]}>
+        {/* Integrated Start Button - Pinned to Bottom */}
+        <View style={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 6, paddingTop: 10 }}>
           <ShieldCta
             onStartTracking={handleStartTracking}
             onManageShield={() => router.push('/(tabs)/shield')}
@@ -333,7 +318,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   progressBar: {
     height: 32,
@@ -358,8 +343,8 @@ const styles = StyleSheet.create({
   },
   morningLightSection: {
     paddingHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 32,
+    marginTop: 20, // Increased by 10pt as requested
+    marginBottom: 8,
   },
   morningLightHeader: {
     flexDirection: 'row',
@@ -398,11 +383,10 @@ const styles = StyleSheet.create({
     color: '#999',
     marginLeft: 4,
   },
-  fixedCtaContainer: {
+  inlineCtaContainer: {
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
-    backgroundColor: 'transparent',
+    marginTop: 12,
+    marginBottom: 0,
   },
   // Modal Styles
   modalOverlay: {
@@ -468,6 +452,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_500Medium',
     color: '#B8860B',
   },
+  benefitCapsule: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    alignSelf: 'flex-start',
+  },
+  benefitText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#333',
+    letterSpacing: 0.2,
+  },
   modalCloseButton: {
     backgroundColor: '#1A1A2E',
     borderRadius: 24,
@@ -478,5 +478,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
     color: '#FFF',
+  },
+  adjustmentBadge: {
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: -4,
+  },
+  adjustmentText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#FF9800',
+    textTransform: 'uppercase',
   },
 });

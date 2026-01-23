@@ -1,13 +1,132 @@
 import ExpoModulesCore
-import FamilyControls
 import ManagedSettings
 import SwiftUI
+import FamilyControls
+
+// MARK: - Models & Helpers
+
+extension FamilyActivitySelection {
+    var displayNames: [String] {
+        var names: [String] = []
+        for app in self.applications {
+            if let name = app.localizedDisplayName { names.append(name) }
+        }
+        for category in self.categories {
+            if let name = category.localizedDisplayName { names.append(name) }
+        }
+        return names.isEmpty ? ["Shielded App"] : names
+    }
+}
+
+struct LumisIconProps: Record {
+  @Field var tokenData: Data?
+  @Field var isCategory: Bool = false
+  @Field var size: Double = 40.0
+  @Field var grayscale: Bool = true
+}
+
+// MARK: - Native Views
+
+class LumisIconView: ExpoView {
+  let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
+  
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    hostingController.view.backgroundColor = .clear
+    addSubview(hostingController.view)
+  }
+  
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    hostingController.view.frame = bounds
+  }
+  
+  func update(props: LumisIconProps) {
+    let decoder = PropertyListDecoder()
+    
+    if props.isCategory {
+      if let data = props.tokenData,
+         let token = try? decoder.decode(ActivityCategoryToken.self, from: data) {
+         let selection = FamilyActivitySelection(categoryTokens: [token])
+         hostingController.rootView = AnyView(
+           IconContainer(selection: selection, size: props.size, grayscale: props.grayscale)
+         )
+      }
+    } else {
+      if let data = props.tokenData,
+         let token = try? decoder.decode(ApplicationToken.self, from: data) {
+         let selection = FamilyActivitySelection(applicationTokens: [token])
+         hostingController.rootView = AnyView(
+           IconContainer(selection: selection, size: props.size, grayscale: props.grayscale)
+         )
+      }
+    }
+  }
+}
+
+struct IconContainer: View {
+  let selection: FamilyActivitySelection
+  let size: Double
+  let grayscale: Bool
+  
+  var body: some View {
+    ZStack {
+      Label(selection)
+        .labelStyle(.iconOnly)
+        .scaleEffect(size / 32.0)
+        .frame(width: size, height: size)
+        .grayscale(grayscale ? 1.0 : 0.0)
+    }
+    .frame(width: size, height: size)
+  }
+}
+
+// Controller for the system app picker
+class FamilyActivityPickerHostingController: UIViewController {
+    var onSelectionComplete: ((FamilyActivitySelection) -> Void)?
+    var onDismiss: (() -> Void)?
+    
+    private var selection = FamilyActivitySelection()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .clear
+        
+        let picker = FamilyActivityPicker(selection: $selection)
+        let hostingController = UIHostingController(rootView: picker)
+        
+        addChild(hostingController)
+        view.addSubview(hostingController.view)
+        hostingController.view.frame = view.bounds
+        hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        hostingController.didMove(toParent: self)
+        
+        // Add Done/Cancel buttons
+        let navBar = UINavigationBar(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 44))
+        let navItem = UINavigationItem(title: "Select Apps")
+        navItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(doneAction))
+        navItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelAction))
+        navBar.setItems([navItem], animated: false)
+        view.addSubview(navBar)
+    }
+    
+    @objc func doneAction() {
+        onSelectionComplete?(selection)
+        dismiss(animated: true)
+    }
+    
+    @objc func cancelAction() {
+        onDismiss?()
+        dismiss(animated: true)
+    }
+}
+
+// MARK: - Main Module
 
 public class LumisScreenTimeModule: Module {
     private var currentPickerController: UIViewController?
     
     private func getDefaults() -> UserDefaults? {
-        // Use standard defaults for UI state persistence to ensure reliability
         return UserDefaults.standard
     }
 
@@ -15,338 +134,149 @@ public class LumisScreenTimeModule: Module {
         Name("lumisscreentime")
 
         Function("hello") { () -> String in
-            NSLog("[LumisScreenTime] hello called")
             return "Lumis Screen Time Module is Active!"
         }
 
-        // Request Screen Time permissions
         AsyncFunction("requestAuthorization") { () async throws -> Bool in
-            NSLog("[LumisScreenTime] requestAuthorization called from JS")
-            if #available(iOS 16.0, *) {
-                do {
-                    try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-                    let status = AuthorizationCenter.shared.authorizationStatus
-                    NSLog("[LumisScreenTime] requestAuthorization: Success, new status: \(status)")
-                    return status == .approved
-                } catch {
-                    NSLog("[LumisScreenTime] requestAuthorization: Error: \(error.localizedDescription)")
-                    return false
-                }
-            } else {
-                NSLog("[LumisScreenTime] requestAuthorization: Unsupported - Screen Time requires iOS 16 or later")
+            do {
+                try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+                return AuthorizationCenter.shared.authorizationStatus == .approved
+            } catch {
                 return false
             }
         }
 
         AsyncFunction("getAuthorizationStatus") { () async -> String in
-            if #available(iOS 16.0, *) {
-                let status = AuthorizationCenter.shared.authorizationStatus
-                var statusString = "unknown"
-                switch status {
-                case .approved: statusString = "approved"
-                case .denied: statusString = "denied"
-                case .notDetermined: statusString = "notDetermined"
-                @unknown default: statusString = "unknown"
-                }
-                NSLog("[LumisScreenTime] getAuthorizationStatus: \(statusString)")
-                return statusString
+            let status = AuthorizationCenter.shared.authorizationStatus
+            switch status {
+            case .approved: return "approved"
+            case .denied: return "denied"
+            case .notDetermined: return "notDetermined"
+            @unknown default: return "unknown"
             }
-            return "unsupported"
         }
         
-        // Present the FamilyActivityPicker SwiftUI view
         AsyncFunction("showAppPicker") { (promise: Promise) in
-            if #available(iOS 16.0, *) {
-                DispatchQueue.main.async {
-                    NSLog("[LumisScreenTime] showAppPicker called")
-                    
-                    // Check authorization status first
-                    let status = AuthorizationCenter.shared.authorizationStatus
-                    if status != .approved {
-                        NSLog("[LumisScreenTime] showAppPicker: Not approved (status: \(status))")
-                        let alert = UIAlertController(title: "Shielding Error", message: "Screen Time is not authorized. Please grant permission first.", preferredStyle: .alert)
-                        alert.addAction(UIAlertAction(title: "OK", style: .default))
-                        
-                        // Try to find window to present alert
-                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                           let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-                           let rootVC = window.rootViewController {
-                            rootVC.present(alert, animated: true)
-                        }
-                        
-                        promise.reject("NOT_AUTHORIZED", "Screen Time matches not authorized")
-                        return
-                    }
-
-                    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                          let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first,
-                          let rootVC = window.rootViewController else {
-                        NSLog("[LumisScreenTime] Error: No root view controller found")
-                        promise.reject("NO_ROOT_VC", "Could not find root view controller")
-                        return
-                    }
-                    
-                    // Find the topmost presented controller
-                    var topVC = rootVC
-                    while let presented = topVC.presentedViewController {
-                        topVC = presented
-                    }
-                    NSLog("[LumisScreenTime] Presenting from: \(type(of: topVC))")
-                    
-                    let pickerVC = FamilyActivityPickerHostingController()
-                    pickerVC.modalPresentationStyle = .formSheet
-                    pickerVC.onDismiss = {
-                        NSLog("[LumisScreenTime] Picker dismissed")
-                        self.currentPickerController = nil
-                        promise.resolve(false)
-                    }
-                    pickerVC.onSelectionComplete = { selection in
-                        NSLog("[LumisScreenTime] Selection complete callback received")
-                        let appCount = selection.applicationTokens.count
-                        let categoryCount = selection.categoryTokens.count
-                        
-                        var response: [String: Any] = [
-                            "success": true,
-                            "count": appCount + categoryCount
-                        ]
-                        
-                        var metadata: [[String: Any]] = []
-                        var toggles: [[String: Any]] = []
-                        let encoder = PropertyListEncoder()
-                        
-                        // Process Apps - Iterate Application objects to get names AND tokens
-                        for app in selection.applications {
-                            let name = app.localizedDisplayName ?? "Unknown App"
-                            if let tokenData = try? encoder.encode(app.token) {
-                                let item: [String: Any] = [
-                                    "name": name,
-                                    "isEnabled": true,
-                                    "isCategory": false,
-                                    "token": tokenData
-                                ]
-                                metadata.append(item)
-                                
-                                var jsItem = item
-                                jsItem.removeValue(forKey: "token")
-                                toggles.append(jsItem)
-                            }
-                        }
-                        
-                        // Process Categories
-                        for category in selection.categories {
-                            let name = category.localizedDisplayName ?? "Unknown Category"
-                            if let tokenData = try? encoder.encode(category.token) {
-                                let item: [String: Any] = [
-                                    "name": name,
-                                    "isEnabled": true,
-                                    "isCategory": true,
-                                    "token": tokenData
-                                ]
-                                metadata.append(item)
-                                
-                                var jsItem = item
-                                jsItem.removeValue(forKey: "token")
-                                toggles.append(jsItem)
-                            }
-                        }
-                        
-                        response["toggles"] = toggles
-                        
-                        // Save COMPLETE metadata (with tokens) to UserDefaults for activateShield
-                        let defaults = self.getDefaults()
-                        defaults?.set(metadata, forKey: "LumisAppMetadata")
-                        defaults?.synchronize()
-                        NSLog("[LumisScreenTime] Saved \(metadata.count) items to LumisAppMetadata")
-                        
-                        self.currentPickerController = nil
-                        promise.resolve(response)
-                    }
-                    
-                    self.currentPickerController = pickerVC
-                    topVC.present(pickerVC, animated: true) {
-                        NSLog("[LumisScreenTime] Picker presented successfully")
-                    }
+            DispatchQueue.main.async {
+                guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let window = windowScene.windows.first(where: { $0.isKeyWindow }) ?? windowScene.windows.first,
+                      let rootVC = window.rootViewController else {
+                    promise.reject("NO_ROOT_VC", "Could not find root view controller")
+                    return
                 }
-            } else {
-                promise.reject("UNSUPPORTED", "FamilyActivityPicker requires iOS 16 or later")
+                
+                var topVC = rootVC
+                while let presented = topVC.presentedViewController {
+                    topVC = presented
+                }
+                
+                let pickerVC = FamilyActivityPickerHostingController()
+                pickerVC.modalPresentationStyle = .formSheet
+                pickerVC.onDismiss = {
+                    promise.resolve(false)
+                }
+                pickerVC.onSelectionComplete = { selection in
+                    let encoder = PropertyListEncoder()
+                    var metadata: [[String: Any]] = []
+                    var toggles: [[String: Any]] = []
+                    
+                    for app in selection.applications {
+                        if let tokenData = try? encoder.encode(app.token) {
+                            let item: [String: Any] = ["name": app.localizedDisplayName ?? "Shielded App", "isEnabled": true, "isCategory": false, "token": tokenData]
+                            metadata.append(item)
+                            // var jsItem = item; jsItem.removeValue(forKey: "token"); toggles.append(jsItem)
+                            toggles.append(item)
+                        }
+                    }
+                    
+                    for category in selection.categories {
+                        if let tokenData = try? encoder.encode(category.token) {
+                            let item: [String: Any] = ["name": category.localizedDisplayName ?? "Category", "isEnabled": true, "isCategory": true, "token": tokenData]
+                            metadata.append(item)
+                            // var jsItem = item; jsItem.removeValue(forKey: "token"); toggles.append(jsItem)
+                            toggles.append(item)
+                        }
+                    }
+                    
+                    self.getDefaults()?.set(metadata, forKey: "LumisAppMetadata")
+                    promise.resolve(["success": true, "count": metadata.count, "toggles": toggles])
+                }
+                
+                topVC.present(pickerVC, animated: true)
             }
         }
-        
-        // Get list of apps for the toggle UI
+
         Function("getAppToggles") { () -> [[String: Any]] in
-            let defaults = self.getDefaults()
-            let metadata = defaults?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
+            let metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
             return metadata.map { item in
                 var newItem = item
-                newItem.removeValue(forKey: "token") // Don't send token data to JS
+                // newItem.removeValue(forKey: "token")
                 return newItem
             }
         }
         
-        // Update a single app's toggle status
         Function("toggleApp") { (name: String, enabled: Bool) -> Bool in
-            let defaults = self.getDefaults()
-            var metadata = defaults?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
-            
+            var metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
             for i in 0..<metadata.count {
                 if metadata[i]["name"] as? String == name {
                     metadata[i]["isEnabled"] = enabled
-                    defaults?.set(metadata, forKey: "LumisAppMetadata")
-                    defaults?.synchronize()
-                    NSLog("[LumisScreenTime] Toggled \(name) to \(enabled)")
+                    self.getDefaults()?.set(metadata, forKey: "LumisAppMetadata")
                     return true
                 }
             }
             return false
         }
 
-        // Activate shield on selected apps
         Function("activateShield") { () -> Bool in
-            if #available(iOS 16.0, *) {
-                let status = AuthorizationCenter.shared.authorizationStatus
-                NSLog("[LumisScreenTime] activateShield: Status is \(status)")
-                guard status == .approved else { 
-                    NSLog("[LumisScreenTime] activateShield: Failed - Not authorized")
-                    return false 
+            let metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
+            let decoder = PropertyListDecoder()
+            var appTokens = Set<ApplicationToken>()
+            var categoryTokens = Set<ActivityCategoryToken>()
+            
+            for item in metadata {
+                guard let isEnabled = item["isEnabled"] as? Bool, isEnabled,
+                      let tokenData = item["token"] as? Data else { continue }
+                
+                if item["isCategory"] as? Bool == true {
+                    if let token = try? decoder.decode(ActivityCategoryToken.self, from: tokenData) { categoryTokens.insert(token) }
+                } else {
+                    if let token = try? decoder.decode(ApplicationToken.self, from: tokenData) { appTokens.insert(token) }
                 }
-
-                let defaults = self.getDefaults()
-                let metadata = defaults?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
-                NSLog("[LumisScreenTime] activateShield: Found \(metadata.count) items in metadata")
-                
-                let decoder = PropertyListDecoder()
-                var appTokens = Set<ApplicationToken>()
-                var categoryTokens = Set<ActivityCategoryToken>()
-                
-                for item in metadata {
-                    guard let isEnabled = item["isEnabled"] as? Bool, isEnabled,
-                          let tokenData = item["token"] as? Data else { 
-                        NSLog("[LumisScreenTime] activateShield: Skipping item \(item["name"] ?? "unknown") - isEnabled: \(item["isEnabled"] ?? "nil")")
-                        continue 
-                    }
-                    
-                    if item["isCategory"] as? Bool == true {
-                        if let token = try? decoder.decode(ActivityCategoryToken.self, from: tokenData) {
-                            categoryTokens.insert(token)
-                            NSLog("[LumisScreenTime] activateShield: Added category token for \(item["name"] ?? "category")")
-                        } else {
-                            NSLog("[LumisScreenTime] activateShield: Failed to decode category token for \(item["name"] ?? "category")")
-                        }
-                    } else {
-                        if let token = try? decoder.decode(ApplicationToken.self, from: tokenData) {
-                            appTokens.insert(token)
-                            NSLog("[LumisScreenTime] activateShield: Added app token for \(item["name"] ?? "app")")
-                        } else {
-                            NSLog("[LumisScreenTime] activateShield: Failed to decode app token for \(item["name"] ?? "app")")
-                        }
-                    }
-                }
-                
-                NSLog("[LumisScreenTime] activateShield: Final counts - Apps: \(appTokens.count), Categories: \(categoryTokens.count)")
-                
-                // Use the default store for maximum reliability
-                let store = ManagedSettingsStore()
-                store.shield.applications = appTokens.isEmpty ? nil : appTokens
-                store.shield.applicationCategories = categoryTokens.isEmpty ? nil : .specific(categoryTokens)
-                
-                // Also update the named store if it was being used
-                let namedStore = ManagedSettingsStore(named: .init("LumisStore"))
-                namedStore.shield.applications = appTokens.isEmpty ? nil : appTokens
-                namedStore.shield.applicationCategories = categoryTokens.isEmpty ? nil : .specific(categoryTokens)
-                
-                return true
             }
-            return false
+            
+            let store = ManagedSettingsStore()
+            store.shield.applications = appTokens.isEmpty ? nil : appTokens
+            store.shield.applicationCategories = categoryTokens.isEmpty ? nil : .specific(categoryTokens)
+            return true
         }
         
-        // Deactivate all shields (called when session completes)
         Function("deactivateShield") { () -> Bool in
-            if #available(iOS 16.0, *) {
-                let store = ManagedSettingsStore()
-                store.shield.applications = nil
-                store.shield.applicationCategories = nil
-                store.shield.webDomains = nil
-                store.shield.webDomainCategories = nil
-
-                let namedStore = ManagedSettingsStore(named: .init("LumisStore"))
-                namedStore.shield.applications = nil
-                namedStore.shield.applicationCategories = nil
-                namedStore.shield.webDomains = nil
-                namedStore.shield.webDomainCategories = nil
-                
-                NSLog("[LumisScreenTime] All shields deactivated in all stores")
-                return true
-            }
-            return false
+            let store = ManagedSettingsStore()
+            store.shield.applications = nil
+            store.shield.applicationCategories = nil
+            return true
         }
         
-        // Get count of selected apps
         Function("getSelectedAppCount") { () -> Int in
-            let defaults = UserDefaults.standard
-            let metadata = defaults.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
-            NSLog("[LumisScreenTime] getSelectedAppCount: checking standard defaults, found \(metadata.count) items")
-            let enabledCount = metadata.filter { ($0["isEnabled"] as? Bool) == true }.count
-            NSLog("[LumisScreenTime] getSelectedAppCount: enabled count is \(enabledCount)")
-            return enabledCount
+            let metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
+            return metadata.filter { ($0["isEnabled"] as? Bool) == true }.count
         }
         
-        // Check if shield is currently active
         Function("isShieldActive") { () -> Bool in
-            if #available(iOS 16.0, *) {
-                let store = ManagedSettingsStore()
-                let hasApps = !(store.shield.applications?.isEmpty ?? true)
-                var hasCategories = false
-                if let policy = store.shield.applicationCategories {
-                    if case .specific(let categories, _) = policy {
-                        hasCategories = !categories.isEmpty
-                    } else if case .all = policy {
-                        hasCategories = true
-                    }
-                }
-                
-                if hasApps || hasCategories { return true }
-                
-                let namedStore = ManagedSettingsStore(named: .init("LumisStore"))
-                let hasAppsNamed = !(namedStore.shield.applications?.isEmpty ?? true)
-                var hasCategoriesNamed = false
-                if let policy = namedStore.shield.applicationCategories {
-                    if case .specific(let categories, _) = policy {
-                        hasCategoriesNamed = !categories.isEmpty
-                    }
-                }
-                return hasAppsNamed || hasCategoriesNamed
+            let store = ManagedSettingsStore()
+            let hasApps = !(store.shield.applications?.isEmpty ?? true)
+            var hasCategories = false
+            if let policy = store.shield.applicationCategories {
+                if case .specific(let categories, _) = policy { hasCategories = !categories.isEmpty }
+                else if case .all = policy { hasCategories = true }
             }
-            return false
+            return hasApps || hasCategories
         }
-        
-        // Legacy stubs for backwards compatibility
-        Function("blockAllApps") { () -> Bool in
-            if #available(iOS 15.0, *) {
-                NSLog("[LumisScreenTime] blockAllApps called - use activateShield instead")
-                return true
+
+        View(LumisIconView.self) {
+            Prop("iconProps") { (view: LumisIconView, props: LumisIconProps) in
+                view.update(props: props)
             }
-            return false
-        }
-        
-        Function("unblockAllApps") { () -> Bool in
-            if #available(iOS 15.0, *) {
-                let store = ManagedSettingsStore()
-                store.shield.applications = nil
-                store.shield.applicationCategories = nil
-                store.shield.webDomains = nil
-                store.shield.webDomainCategories = nil
-                NSLog("[LumisScreenTime] unblockAllApps called - shields cleared")
-                return true
-            }
-            return false
-        }
-        
-        Function("areAppsBlocked") { () -> Bool in
-            if #available(iOS 15.0, *) {
-                let store = ManagedSettingsStore()
-                return store.shield.applicationCategories != nil || store.shield.applications != nil
-            }
-            return false
         }
     }
 }

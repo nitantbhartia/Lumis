@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Bell } from 'lucide-react-native';
 import { notificationService } from '@/lib/notifications';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 export default function OnboardingPermissionNotificationsScreen() {
     const router = useRouter();
@@ -24,8 +25,8 @@ export default function OnboardingPermissionNotificationsScreen() {
             console.log('[Notifications Permission] Error:', e);
         }
 
-        // Navigate to app selection (shield) screen
-        router.push('/app-selection');
+        // Navigate to success screen
+        router.push('/onboarding-success');
     };
 
     const handleBack = () => {
@@ -74,19 +75,15 @@ export default function OnboardingPermissionNotificationsScreen() {
 
                     {/* Buttons */}
                     <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.buttonsContainer}>
-                        <Pressable onPress={handleAllow} style={styles.allowButtonContainer}>
-                            <LinearGradient
-                                colors={['#FFB347', '#FF8C00']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.allowButton}
-                            >
-                                <Text style={styles.allowButtonText}>
-                                    {isRequesting ? 'Requesting...' : 'Allow Notifications'}
-                                </Text>
-                            </LinearGradient>
-                        </Pressable>
-
+                        <View style={styles.allowButtonContainer}>
+                            <LumisHeroButton
+                                title={isRequesting ? 'Requesting...' : 'Allow Notifications'}
+                                onPress={handleAllow}
+                                icon={<Bell size={20} color="#1A1A2E" strokeWidth={2.5} />}
+                                loading={isRequesting}
+                                disabled={isRequesting}
+                            />
+                        </View>
                     </Animated.View>
                 </View>
             </LinearGradient>

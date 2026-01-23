@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Clock } from 'lucide-react-native';
 import { requestScreenTimeAuthorization, showAppPicker } from '@/lib/screen-time';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 export default function OnboardingPermissionScreenTimeScreen() {
     const router = useRouter();
@@ -19,16 +20,9 @@ export default function OnboardingPermissionScreenTimeScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         try {
-            const authResult = await requestScreenTimeAuthorization();
-            console.log('[Screen Time Permission] Auth Result:', authResult);
-
-            if (authResult) {
-                // If authorized, immediately show the app picker
-                const pickerResult = await showAppPicker();
-                console.log('[Screen Time Permission] Picker Result:', pickerResult);
-            }
+            await requestScreenTimeAuthorization();
         } catch (e) {
-            console.log('[Screen Time Permission] Error:', e);
+            console.error('[Screen Time Permission] Error:', e);
         } finally {
             setIsRequesting(false);
             router.push('/onboarding-permission-notifications');
@@ -81,18 +75,15 @@ export default function OnboardingPermissionScreenTimeScreen() {
 
                     {/* Buttons */}
                     <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.buttonsContainer}>
-                        <Pressable onPress={handleAllow} style={styles.allowButtonContainer}>
-                            <LinearGradient
-                                colors={['#FFB347', '#FF8C00']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.allowButton}
-                            >
-                                <Text style={styles.allowButtonText}>
-                                    {isRequesting ? 'Requesting...' : 'Allow Screen Time'}
-                                </Text>
-                            </LinearGradient>
-                        </Pressable>
+                        <View style={styles.allowButtonContainer}>
+                            <LumisHeroButton
+                                title={isRequesting ? 'Requesting...' : 'Allow Screen Time'}
+                                onPress={handleAllow}
+                                icon={<Clock size={20} color="#1A1A2E" strokeWidth={2.5} />}
+                                loading={isRequesting}
+                                disabled={isRequesting}
+                            />
+                        </View>
 
                     </Animated.View>
                 </View>
@@ -158,13 +149,20 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     allowButton: {
-        paddingVertical: 18,
-        borderRadius: 30,
+        paddingVertical: 22,
+        borderRadius: 20,
         alignItems: 'center',
+        shadowColor: '#FF8C00',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 10,
     },
     allowButtonText: {
-        fontSize: 18,
-        fontFamily: 'Outfit_600SemiBold',
+        fontSize: 20,
+        fontFamily: 'Outfit_700Bold',
         color: '#1A1A2E',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
 });

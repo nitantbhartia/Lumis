@@ -1,101 +1,226 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Platform, ScrollView } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, Dimensions, Platform, Modal, ScrollView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedProps,
   withRepeat,
   withTiming,
+  withSequence,
   Easing,
-  FadeIn
+  FadeIn,
+  FadeInDown,
+  interpolate,
+  interpolateColor,
+  runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import { Sun, Pause, Play, X, MapPin, Zap } from 'lucide-react-native';
-import { calculateVitaminD, calculateLightQuality } from '@/lib/bio-metrics';
-import Svg, { Circle, Line, Text as SvgText, G, Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
+import { BlurView } from 'expo-blur';
+import { Sun, Shield, Lock, Trash2, X, Zap, AlertTriangle } from 'lucide-react-native';
+import { calculateVitaminD } from '@/lib/bio-metrics';
+import Svg, { Circle, G, Line } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { deactivateShield, activateShield } from '@/lib/screen-time';
+import { deactivateShield, activateShield, LumisIcon } from '@/lib/screen-time';
 import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
+import { CoolDownModal } from '@/components/CoolDownModal';
+import { ShieldPreviewRow } from '@/components/ShieldPreviewRow';
 
-const { width, height } = Dimensions.get('window');
-const RADAR_SIZE = width * 0.45;
+const { width } = Dimensions.get('window');
+const TIMER_SIZE = width * 0.75;
+const STROKE_WIDTH = 12;
+const RADIUS = (TIMER_SIZE - STROKE_WIDTH) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-// Circular Sun-Radar Component from IMG_9312
-function SunRadar({ heading = 0, sunPosition = 45 }: { heading?: number, sunPosition?: number }) {
-  const radius = (RADAR_SIZE - 20) / 2;
+// Science Ticker Messages
+const TICKER_MESSAGES = [
+  "Anchoring morning cortisol...",
+  "Calibrating circadian clock...",
+  "Clearing sleep adenosine...",
+  "Generating serenity...",
+  "Boosting serotonin levels...",
+  "Aligning biological rhythm..."
+];
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedText = Animated.createAnimatedComponent(Text);
+const AnimatedView = Animated.createAnimatedComponent(View);
+
+// --- 1. Biological Sun Timer (Pulse Countdown) ---
+const BiologicalSunTimer = ({ progress, remainingSeconds }: { progress: number, remainingSeconds: number }) => {
+  const animatedProgress = useSharedValue(0);
+  const pulseScale = useSharedValue(1);
+
+  useEffect(() => {
+    animatedProgress.value = withTiming(progress, { duration: 1000, easing: Easing.out(Easing.ease) });
+  }, [progress]);
+
+  useEffect(() => {
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => {
+    const strokeDashoffset = CIRCUMFERENCE - (CIRCUMFERENCE * animatedProgress.value);
+    return {
+      strokeDashoffset,
+    };
+  });
+
+  // Glow pulse for the active ring
+  const glowOpacity = useSharedValue(0.5);
+  useEffect(() => {
+    glowOpacity.value = withRepeat(
+      withTiming(0.8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+    shadowOpacity: glowOpacity.value,
+  }));
+
+  const textPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <View style={{ width: RADAR_SIZE, height: RADAR_SIZE, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={RADAR_SIZE} height={RADAR_SIZE} viewBox="0 0 200 200">
-        {/* Radar Rings */}
-        {[30, 50, 70, 90].map((r, i) => (
+    <View style={styles.timerContainer}>
+      <Svg width={TIMER_SIZE} height={TIMER_SIZE} viewBox={`0 0 ${TIMER_SIZE} ${TIMER_SIZE}`}>
+        <G rotation="-90" origin={`${TIMER_SIZE / 2}, ${TIMER_SIZE / 2}`}>
+          {/* Background Ring (Glassy) */}
           <Circle
-            key={i}
-            cx="100"
-            cy="100"
-            r={r}
-            stroke="rgba(255, 255, 255, 0.4)"
-            strokeWidth="1"
+            cx={TIMER_SIZE / 2}
+            cy={TIMER_SIZE / 2}
+            r={RADIUS}
+            stroke="rgba(255, 255, 255, 0.15)"
+            strokeWidth={STROKE_WIDTH}
             fill="none"
           />
-        ))}
-
-        {/* Outer Tick Marks */}
-        {Array.from({ length: 72 }).map((_, i) => {
-          const angle = (i * 5 * Math.PI) / 180;
-          const r1 = 92;
-          const r2 = 98;
-          return (
-            <Line
-              key={i}
-              x1={100 + r1 * Math.sin(angle)}
-              y1={100 - r1 * Math.cos(angle)}
-              x2={100 + r2 * Math.sin(angle)}
-              y2={100 - r2 * Math.cos(angle)}
-              stroke="rgba(255, 255, 255, 0.5)"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Sun Indicator */}
-        <G transform={`rotate(${sunPosition}, 100, 100)`}>
-          <Line
-            x1="100"
-            y1="100"
-            x2="100"
-            y2="30"
+          {/* Progress Ring (Amber Glow) */}
+          <AnimatedCircle
+            cx={TIMER_SIZE / 2}
+            cy={TIMER_SIZE / 2}
+            r={RADIUS}
             stroke="#FFB347"
-            strokeWidth="2"
+            strokeWidth={STROKE_WIDTH}
+            fill="none"
             strokeLinecap="round"
+            strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+            animatedProps={animatedProps}
+            // @ts-ignore - reanimated props
+            style={[glowStyle, {
+              shadowColor: "#FFB347",
+              shadowOffset: { width: 0, height: 0 },
+              shadowRadius: 10,
+            }]}
           />
-          <G transform="translate(100, 30)">
-            {/* Tiny sun icon */}
-            <Circle cx="0" cy="0" r="4" fill="#FFB347" />
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Line
-                key={i}
-                x1="0"
-                y1="-6"
-                x2="0"
-                y2="-8"
-                stroke="#FFB347"
-                strokeWidth="1"
-                transform={`rotate(${i * 45})`}
-              />
-            ))}
-          </G>
         </G>
-
-        {/* Center tiny dot */}
-        <Circle cx="100" cy="100" r="2" fill="white" />
       </Svg>
+
+      {/* Center Display */}
+      <View style={styles.timerCenter}>
+        <AnimatedText sharedTransitionTag="sessionTimer" style={[styles.timerValue, textPulseStyle]}>
+          {formatTime(remainingSeconds)}
+        </AnimatedText>
+        <Text style={styles.timerLabel}>REMAINING</Text>
+      </View>
     </View>
   );
-}
+};
+
+// --- 2. Lux Intensity Meter ---
+const LuxIntensityMeter = ({ lux }: { lux: number }) => {
+  const pulseScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (lux > 1000) {
+      pulseScale.value = withRepeat(
+        withTiming(1.2, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    } else {
+      pulseScale.value = withTiming(1);
+    }
+  }, [lux]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: interpolate(lux, [0, 10000], [0.6, 1]),
+  }));
+
+  const sunColor = lux > 5000 ? "#FFD700" : (lux > 1000 ? "#FFB347" : "rgba(255, 255, 255, 0.6)");
+
+  return (
+    <View style={styles.luxContainer}>
+      <Animated.View style={[styles.luxIconContainer, animatedStyle]}>
+        <Sun
+          size={32}
+          color={sunColor}
+          fill={lux > 1000 ? sunColor : "none"}
+          strokeWidth={lux > 1000 ? 0 : 2}
+        />
+      </Animated.View>
+      <View style={styles.luxTextContainer}>
+        <Text style={styles.luxValue}>{lux.toLocaleString()} LUX</Text>
+        <Text style={styles.luxLabel}>INTENSITY</Text>
+      </View>
+    </View>
+  );
+};
+
+
+
+// --- 4. Science Ticker ---
+const ScienceTicker = () => {
+  const [msgIndex, setMsgIndex] = useState(0);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      opacity.value = withSequence(
+        withTiming(0, { duration: 500 }),
+        withTiming(1, { duration: 500 })
+      );
+      setTimeout(() => {
+        setMsgIndex(prev => (prev + 1) % TICKER_MESSAGES.length);
+      }, 500);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value
+  }));
+
+  return (
+    <View style={styles.tickerContainer}>
+      <AnimatedText style={[styles.tickerText, animatedStyle]}>
+        {TICKER_MESSAGES[msgIndex]}
+      </AnimatedText>
+    </View>
+  );
+};
+
+
 
 export default function TrackingScreen() {
   const router = useRouter();
@@ -108,85 +233,50 @@ export default function TrackingScreen() {
   const incrementStreak = useLumisStore((s) => s.incrementStreak);
   const addToHistory = useLumisStore((s) => s.addToHistory);
   const setTrackingActive = useLumisStore((s) => s.setTrackingActive);
-  const setSelectedActivity = useLumisStore((s) => s.setSelectedActivity);
+  const blockedApps = useLumisStore((s) => s.blockedApps);
+  const activeApps = useMemo(() => blockedApps.filter(a => a.isBlocked), [blockedApps]);
 
-  const { status, lux, steps, creditRate } = useSmartEnvironment();
+  const { lux, steps } = useSmartEnvironment();
   const [sessionSeconds, setSessionSeconds] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [location, setLocation] = useState<{ city: string; heading: number; temp: number; weather: string } | null>(null);
   const [sessionCoordinates, setSessionCoordinates] = useState<{ latitude: number, longitude: number, timestamp: number }[]>([]);
-  const lastCoordRef = useRef<{ latitude: number, longitude: number } | null>(null);
-
   const accumulatedMinutesRef = useRef(todayProgress.lightMinutes);
-  const pulseScale = useSharedValue(1);
+
+  const [showCoolDown, setShowCoolDown] = useState(false);
 
   const sessionMinutes = sessionSeconds / 60;
   const totalMinutes = accumulatedMinutesRef.current + sessionMinutes;
+
+  // Calculate remaining target
+  const remainingMinutes = Math.max(0, dailyGoalMinutes - totalMinutes);
+  const remainingSeconds = Math.max(0, (remainingMinutes * 60));
+
+  const progress = Math.min(1, sessionMinutes / Math.max(1, dailyGoalMinutes - accumulatedMinutesRef.current));
+  const dailyProgress = Math.min(1, totalMinutes / dailyGoalMinutes);
+
   const isGoalReached = totalMinutes >= dailyGoalMinutes;
-
-  // Estimate calories (rough: 0.05 cal per step walking)
-  const calories = Math.round(steps * 0.05);
-  // Estimate distance (rough: 0.0005 miles per step)
-  const distanceMiles = (steps * 0.0005).toFixed(1);
-
-  const getActivityLabel = () => {
-    switch (selectedActivity) {
-      case 'walk': return 'WALKING';
-      case 'run': return 'RUNNING';
-      case 'meditate': return 'MEDITATING';
-      case 'sit_soak': return 'MORNING LIGHT';
-      default: return 'TRACKING';
-    }
-  };
 
   useEffect(() => {
     setTrackingActive(true);
 
-    // Default to 'sit_soak' for generic morning light if nothing selected
-    if (!selectedActivity) {
-      setSelectedActivity('sit_soak');
-    }
-
-    pulseScale.value = withRepeat(
-      withTiming(1.02, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-
-    // Activate shields on selected apps at session start
+    // Activate shields
     if (Platform.OS === 'ios') {
-      console.log('[Tracking] Activating app shields');
-      const success = activateShield();
-      if (!success) {
-        console.error('[Tracking] Shield activation returned false');
-      }
+      activateShield();
     }
 
-    // Get location info
+    // Location Tracking
     (async () => {
       try {
         const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
         if (locStatus === 'granted') {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          const heading = await Location.getHeadingAsync();
-
-          setLocation({
-            city: 'SAN DIEGO, CA',
-            heading: heading.trueHeading || heading.magHeading || 0,
-            temp: 15.0,
-            weather: 'MOSTLY CLOUDY',
-          });
-
-          // Initial coordinate
           setSessionCoordinates([{
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
             timestamp: Date.now()
           }]);
-          lastCoordRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         }
       } catch (e) {
-        console.log('[Tracking] Location error:', e);
+        console.log("Loc start error", e);
       }
     })();
 
@@ -195,36 +285,33 @@ export default function TrackingScreen() {
     };
   }, []);
 
-  // Timer
+  // Timer Tick
   useEffect(() => {
-    if (isPaused || isGoalReached) return;
+    if (isGoalReached) return;
 
     const interval = setInterval(async () => {
       setSessionSeconds((prev) => prev + 1);
 
-      // Record coordinate every 10 seconds
-      if (sessionSeconds % 10 === 0) {
+      // Record coordinate every 30 seconds to save batt
+      if ((sessionSeconds + 1) % 30 === 0) {
         try {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           setSessionCoordinates(prev => [
             ...prev,
             { latitude: loc.coords.latitude, longitude: loc.coords.longitude, timestamp: Date.now() }
           ]);
-          lastCoordRef.current = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-        } catch (e) {
-          console.log('[Tracking] Tick coord error:', e);
-        }
+        } catch (e) { console.log('Loc update error', e) }
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPaused, isGoalReached]);
+  }, [isGoalReached, sessionSeconds]);
 
-  // Check for goal completion
+  // Goal Completion
   useEffect(() => {
     if (isGoalReached && !todayProgress.completed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      deactivateShield(); // Lift all app shields after sunlight goal met
+      deactivateShield();
 
       const completedProgress = {
         ...todayProgress,
@@ -235,10 +322,8 @@ export default function TrackingScreen() {
       };
 
       const skinType = useLumisStore.getState().skinType;
-      // Estimate Vitamin D
       const vitD = calculateVitaminD(4, sessionSeconds / 60, skinType);
 
-      // Create detailed session object
       const session = {
         id: `session_${Date.now()}`,
         type: selectedActivity || 'walk',
@@ -249,15 +334,13 @@ export default function TrackingScreen() {
         calories: Math.round(steps * 0.05),
         distance: parseFloat((steps * 0.0005).toFixed(2)),
         lux: lux,
-        uvIndex: 4, // Mock or real UV from context/weather
+        uvIndex: 4,
         temperature: 15.0,
         vitaminD: vitD,
         coordinates: sessionCoordinates
       };
 
-      const addActivityToHistory = useLumisStore.getState().addActivityToHistory;
-      addActivityToHistory(session as any);
-
+      useLumisStore.getState().addActivityToHistory(session as any);
       updateTodayProgress(completedProgress);
       incrementStreak();
       addToHistory(completedProgress);
@@ -268,8 +351,14 @@ export default function TrackingScreen() {
     }
   }, [isGoalReached]);
 
-  const handleClose = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handleEmergencyBreak = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setShowCoolDown(true);
+  };
+
+  const confirmExit = () => {
+    setShowCoolDown(false);
+    deactivateShield();
     updateTodayProgress({
       lightMinutes: totalMinutes,
       steps: steps,
@@ -277,137 +366,47 @@ export default function TrackingScreen() {
     router.back();
   };
 
-  const handlePauseToggle = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsPaused(!isPaused);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <View style={{ flex: 1 }}>
       <LinearGradient
-        colors={['#8FA3C6', '#C7BCCB', '#F3A675', '#EC8650']}
-        locations={[0, 0.3, 0.7, 1]}
+        colors={['#8FA3C6', '#C7BCCB', '#F3A675', '#EC8650']} // Sunset to Sunrise
+        locations={[0, 0.4, 0.8, 1]}
         style={{ flex: 1 }}
       >
-        {/* Wave Overlay */}
-        <View style={StyleSheet.absoluteFill}>
-          <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-            <Path
-              d={`M 0 ${height * 0.45} Q ${width * 0.5} ${height * 0.4} ${width} ${height * 0.45} L ${width} ${height} L 0 ${height} Z`}
-              fill="rgba(255, 255, 255, 0.05)"
-            />
-          </Svg>
-        </View>
+        <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }]}>
 
-        <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
-          {/* Header */}
+          {/* Header: Lux Meter & Environment */}
           <View style={styles.header}>
-            <Text style={styles.activityLabel}>{getActivityLabel()}</Text>
-            <Pressable onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#1A1A2E" />
-            </Pressable>
+            <LuxIntensityMeter lux={lux} />
           </View>
 
-          {/* Tracking Badge */}
-          <View style={styles.trackingBadge}>
-            <View style={styles.trackingDot} />
-            <Text style={styles.trackingText}>Tracking</Text>
-          </View>
+          {/* Main Content */}
+          <View style={styles.content}>
 
-          {/* Radar Info Card */}
-          <Animated.View entering={FadeIn.duration(800)} style={styles.infoCard}>
-            <SunRadar heading={location?.heading || 0} />
-            <View style={styles.locationInfo}>
-              <Text style={styles.headingValue}>
-                {location ? `-${Math.round(location.heading)}° W` : '--'}
-              </Text>
-              <Text style={styles.cityText}>{location?.city || 'LOCATING...'}</Text>
-              <Text style={styles.weatherCondition}>{location?.weather || '--'}</Text>
-              <Text style={styles.tempText}>{location?.temp.toFixed(1)}°C</Text>
-            </View>
-          </Animated.View>
+            {/* Science Ticker */}
+            <ScienceTicker />
 
-          {/* Stats Section */}
-          <View style={styles.statsCard}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>STEPS</Text>
-              <Text style={styles.statValue}>{steps}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>CALORIES</Text>
-              <Text style={styles.statValue}>{calories}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>DISTANCE</Text>
-              <Text style={styles.statValue}>{distanceMiles} mi</Text>
-            </View>
-          </View>
+            {/* Sun Timer */}
+            <BiologicalSunTimer progress={dailyProgress} remainingSeconds={remainingSeconds} />
 
-          {/* Large Timer */}
-          <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>{formatTime(sessionSeconds)}</Text>
-          </View>
-
-          {/* Activity Tags (Secondary Customization) */}
-          <View style={styles.activitySelectorContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.activityScrollContent}
-            >
-              {[
-                { id: 'sit_soak', label: 'Morning Light' },
-                { id: 'walk', label: 'Walking' },
-                { id: 'run', label: 'Running' },
-                { id: 'meditate', label: 'Meditation' },
-              ].map((activity) => (
-                <Pressable
-                  key={activity.id}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedActivity(activity.id as any);
-                  }}
-                  style={[
-                    styles.activityChip,
-                    selectedActivity === activity.id && styles.activityChipActive
-                  ]}
-                >
-                  <Text style={[
-                    styles.activityChipText,
-                    selectedActivity === activity.id && styles.activityChipTextActive
-                  ]}>
-                    {activity.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Bottom Spacer */}
-          <View style={{ height: 20 }} />
-
-          {/* Pause Button */}
-          <Pressable
-            onPress={handlePauseToggle}
-            style={({ pressed }) => [
-              styles.pauseButton,
-              pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }
-            ]}
-          >
-            {isPaused ? (
-              <Play size={32} color="#1A1A2E" fill="#1A1A2E" />
-            ) : (
-              <Pause size={32} color="#1A1A2E" fill="#1A1A2E" />
+            {/* Shield Preview */}
+            {activeApps.length > 0 && (
+              <BlurView intensity={20} tint="light" style={styles.shieldPreviewCard}>
+                <ShieldPreviewRow activeApps={activeApps} lux={lux} />
+              </BlurView>
             )}
+
+          </View>
+
+          {/* Footer: Emergency Break */}
+          <Pressable onPress={handleEmergencyBreak} style={styles.emergencyButton} hitSlop={20}>
+            <Text style={styles.emergencyText}>Emergency Break</Text>
           </Pressable>
+
         </View>
       </LinearGradient>
+
+      <CoolDownModal visible={showCoolDown} onComplete={confirmExit} />
     </View>
   );
 }
@@ -415,166 +414,141 @@ export default function TrackingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     paddingHorizontal: 24,
+    justifyContent: 'space-between',
   },
   header: {
-    width: '100%',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 40,
+  },
+  // Lux Meter
+  luxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    height: 48,
-  },
-  activityLabel: {
-    fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#FFF',
-    letterSpacing: 2,
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 0,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  trackingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginTop: 12,
-    gap: 8,
-  },
-  trackingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4ADE80',
-  },
-  trackingText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_500Medium',
-    color: '#1A1A2E',
-  },
-  infoCard: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 24,
-    marginTop: 32,
-    gap: 20,
-  },
-  locationInfo: {
-    flex: 1,
-  },
-  headingValue: {
-    fontSize: 18,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#FFF',
-    marginBottom: 4,
-  },
-  cityText: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
-    color: 'rgba(255, 255, 255, 0.8)',
-    letterSpacing: 0.5,
-  },
-  weatherCondition: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
-  },
-  tempText: {
-    fontSize: 18,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#FFF',
-    marginTop: 4,
-  },
-  statsCard: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 32,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 24,
-    marginTop: 16,
-  },
-  statBox: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_600SemiBold',
-    color: 'rgba(255, 255, 255, 0.6)',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 22,
-    fontFamily: 'Outfit_700Bold',
-    color: '#FFF',
-  },
-  timerContainer: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-  timerText: {
-    fontSize: 80,
-    fontFamily: 'Outfit_300Light',
-    color: '#FFF',
-  },
-  pauseButton: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#FFE4B5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  activitySelectorContainer: {
-    width: '100%',
-    marginTop: 20,
-  },
-  activityScrollContent: {
-    paddingHorizontal: 0,
-    gap: 8,
-  },
-  activityChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  activityChipActive: {
-    backgroundColor: '#FFE4B5',
-    borderColor: '#FFE4B5',
+  luxIconContainer: {
+    // 
   },
-  activityChipText: {
+  luxTextContainer: {
+    justifyContent: 'center',
+  },
+  luxValue: {
+    fontSize: 16,
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFF',
+  },
+  luxLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_600SemiBold',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1,
+  },
+  // Ticker
+  tickerContainer: {
+    height: 30, // Fixed height to prevent layout jumps
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tickerText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  // Sun Timer
+  timerContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerValue: {
+    fontSize: 64,
+    fontFamily: 'Outfit_300Light',
+    color: '#FFF',
+    fontVariant: ['tabular-nums'],
+  },
+  timerLabel: {
     fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
-    color: '#FFF',
-    letterSpacing: 0.5,
+    color: 'rgba(255, 255, 255, 0.6)',
+    letterSpacing: 2,
+    marginTop: 4,
   },
-  activityChipTextActive: {
-    color: '#1A1A2E',
+  // Shield Preview
+  shieldPreviewCard: {
+    width: '100%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    paddingVertical: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
+  shieldRowContainer: {
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  glowContainer: {
+    shadowColor: '#FFB347',
+    shadowOffset: { width: 0, height: 0 },
+  },
+  shieldLabel: {
+    fontSize: 11,
+    fontFamily: 'Outfit_600SemiBold',
+    color: 'rgba(255, 255, 255, 0.6)',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  iconScroll: {
+    maxHeight: 40,
+  },
+  iconScrollContent: {
+    paddingHorizontal: 24,
+    gap: 16,
+    alignItems: 'center',
+    minWidth: '100%',
+    justifyContent: 'center',
+  },
+  iconRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  shieldIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Glassy container for icon
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Emergency Button
+  emergencyButton: {
+    alignSelf: 'center',
+    padding: 12,
+  },
+  emergencyText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    color: 'rgba(255, 255, 255, 0.5)',
+    textDecorationLine: 'underline',
+  },
+  // Modal styles removed (moved to component)
 });

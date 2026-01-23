@@ -193,16 +193,17 @@ export const useAuthStore = create<AuthState>()(
           if (USE_MOCK_API) {
             await delay(1000);
 
+            const finalName = data.name || get().userName || 'Explorer';
             const user: User = {
               id: 'user_' + Math.random().toString(36).substr(2, 9),
               email: data.email ?? `${data.provider}user@example.com`,
-              name: data.name ?? `${data.provider.charAt(0).toUpperCase() + data.provider.slice(1)} User`,
+              name: finalName,
               avatarUrl: data.avatarUrl ?? undefined,
               createdAt: new Date().toISOString(),
               isPremium: false,
             };
 
-            set({ user, isAuthenticated: true, isLoading: false });
+            set({ user, isAuthenticated: true, isLoading: false, userName: finalName });
             // Simulate new user for onboarding flow
             return { success: true, isNewUser: true };
           }

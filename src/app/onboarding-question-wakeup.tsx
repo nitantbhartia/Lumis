@@ -20,7 +20,7 @@ export default function OnboardingQuestionWakeupScreen() {
     const handleNext = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         // Save wake time to store here if implemented
-        router.push('/onboarding-permission-motion');
+        router.push('/onboarding-question-sunlight');
     };
 
     const handleTimeChange = (event: any, selectedDate?: Date) => {
@@ -45,6 +45,13 @@ export default function OnboardingQuestionWakeupScreen() {
                         paddingHorizontal: 24,
                     }}
                 >
+                    {/* Progress Indicator */}
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressBar}>
+                            <View style={[styles.progressFill, { width: '60%' }]} />
+                        </View>
+                        <Text style={styles.progressLabel}>BUILDING YOUR CIRCADIAN PROFILE</Text>
+                    </View>
                     {/* Question */}
                     <View style={styles.questionContainer}>
                         <Text style={styles.questionText}>
@@ -99,6 +106,27 @@ export default function OnboardingQuestionWakeupScreen() {
 }
 
 const styles = StyleSheet.create({
+    progressContainer: {
+        marginBottom: 32,
+    },
+    progressBar: {
+        height: 4,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#FF8C00',
+    },
+    progressLabel: {
+        fontSize: 10,
+        fontFamily: 'Outfit_700Bold',
+        color: '#FF8C00',
+        letterSpacing: 1,
+        textAlign: 'center',
+    },
     questionContainer: {
         marginTop: 40,
         marginBottom: 32,

@@ -34,7 +34,7 @@ export default function OnboardingValuePropScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/onboarding-calibration');
+    router.push('/calibration');
   };
 
   return (

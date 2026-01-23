@@ -70,24 +70,24 @@ function RootLayoutNav() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding-splash" />
+        <Stack.Screen name="onboarding-trap" />
+        <Stack.Screen name="onboarding-fog" />
         <Stack.Screen name="onboarding-question-sunlight" />
         <Stack.Screen name="onboarding-question-wakeup" />
-        <Stack.Screen name="onboarding-goal-setup" />
+        <Stack.Screen name="onboarding-profile-complete" options={{ animation: 'fade' }} />
+        <Stack.Screen name="onboarding-science" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="onboarding-commitment" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="onboarding-permission-location" />
         <Stack.Screen name="onboarding-permission-motion" />
         <Stack.Screen name="onboarding-permission-screentime" />
         <Stack.Screen name="onboarding-permission-notifications" />
         <Stack.Screen name="onboarding-value-prop" />
-        <Stack.Screen name="onboarding-calibration" />
         <Stack.Screen name="onboarding-auth" />
         <Stack.Screen name="onboarding-email-otp" />
-        <Stack.Screen name="onboarding-permissions" />
         <Stack.Screen name="onboarding-success" />
         <Stack.Screen name="login" />
         <Stack.Screen name="signup" />
         <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="calibration" />
         <Stack.Screen name="app-selection" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="compass-lux" />

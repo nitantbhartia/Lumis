@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 const OPTIONS = [
     { id: 'daily', label: 'Daily' },
@@ -21,18 +22,25 @@ export default function OnboardingQuestionSunlightScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const [selected, setSelected] = useState<SunlightFrequency | null>(null);
+    const [isNavigating, setIsNavigating] = useState(false);
     const setSunlightFrequency = useLumisStore((s) => s.setSunlightFrequency);
 
     const handleSelect = (id: SunlightFrequency) => {
+        if (isNavigating) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelected(id);
+        setSunlightFrequency(id);
+        // Auto-navigate after selection for smoother flow
+        setTimeout(() => {
+            handleNext();
+        }, 400);
     };
 
     const handleNext = () => {
-        if (!selected) return;
+        if (isNavigating) return;
+        setIsNavigating(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        setSunlightFrequency(selected);
-        router.push('/onboarding-question-wakeup');
+        router.push('/onboarding-profile-complete');
     };
 
 
@@ -51,6 +59,13 @@ export default function OnboardingQuestionSunlightScreen() {
                         paddingHorizontal: 24,
                     }}
                 >
+                    {/* Progress Indicator */}
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressBar}>
+                            <View style={[styles.progressFill, { width: '80%' }]} />
+                        </View>
+                        <Text style={styles.progressLabel}>BUILDING YOUR CIRCADIAN PROFILE</Text>
+                    </View>
 
                     {/* Question */}
                     <View style={styles.questionContainer}>
@@ -90,28 +105,14 @@ export default function OnboardingQuestionSunlightScreen() {
                     <View style={{ flex: 1 }} />
 
                     {/* Next Button */}
-                    <Pressable
-                        onPress={handleNext}
-                        disabled={!selected}
-                        style={styles.nextButtonContainer}
-                    >
-                        <LinearGradient
-                            colors={selected ? ['#FFB347', '#FF8C00'] : ['#D0D0D0', '#C0C0C0']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.nextButton}
-                        >
-                            <Text
-                                style={[
-                                    styles.nextButtonText,
-                                    !selected && { color: '#888' },
-                                ]}
-                            >
-                                Next
-                            </Text>
-                            <ArrowRight size={20} color={selected ? '#1A1A2E' : '#888'} strokeWidth={2} />
-                        </LinearGradient>
-                    </Pressable>
+                    <View style={styles.nextButtonContainer}>
+                        <LumisHeroButton
+                            title="Next"
+                            onPress={handleNext}
+                            disabled={!selected}
+                            icon={null}
+                        />
+                    </View>
                 </View>
             </LinearGradient>
         </View>
@@ -119,6 +120,27 @@ export default function OnboardingQuestionSunlightScreen() {
 }
 
 const styles = StyleSheet.create({
+    progressContainer: {
+        marginBottom: 32,
+    },
+    progressBar: {
+        height: 4,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#FF8C00',
+    },
+    progressLabel: {
+        fontSize: 10,
+        fontFamily: 'Outfit_700Bold',
+        color: '#FF8C00',
+        letterSpacing: 1,
+        textAlign: 'center',
+    },
     backButton: {
         width: 48,
         height: 48,
@@ -174,13 +196,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 18,
-        borderRadius: 30,
+        paddingVertical: 22,
+        borderRadius: 20,
         gap: 8,
+        shadowColor: '#FF8C00',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 10,
     },
     nextButtonText: {
-        fontSize: 18,
-        fontFamily: 'Outfit_600SemiBold',
+        fontSize: 20,
+        fontFamily: 'Outfit_700Bold',
         color: '#1A1A2E',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
 });

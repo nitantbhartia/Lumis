@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.description    = 'Native module for Screen Time management in Lumis'
   s.author         = 'Lumis'
   s.homepage       = 'https://lumis.app'
-  s.platforms      = { :ios => '15.0' }
+  s.platforms      = { :ios => '16.0' }
   s.source         = { :git => 'https://github.com/lumis.git', :tag => s.version.to_s }
   s.source_files   = '*.swift'
   s.dependency 'ExpoModulesCore'

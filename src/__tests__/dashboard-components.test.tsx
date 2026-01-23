@@ -1,7 +1,7 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
 import { MissionBriefingCard } from '../components/dashboard/MissionBriefingCard';
-import { DaylightBar } from '../components/dashboard/DaylightBar';
+import { MorningLightSlider } from '../components/dashboard/MorningLightSlider';
 import { ShieldCta } from '../components/dashboard/ShieldCta';
 
 // Mock dependencies
@@ -43,17 +43,24 @@ describe('Dashboard Components', () => {
     it('MissionBriefingCard renders correctly', () => {
         const tree = renderer.create(
             <MissionBriefingCard
-                weatherCondition="Clear"
-                hoursSinceSunrise={2}
-                streak={5}
-                userName="Nitant"
+                mission={{
+                    title: "Clear Sky Sprint",
+                    message: "Test Message",
+                    luxScore: "10,000+ Lux",
+                    duration: "10-12 min",
+                    durationValue: 12,
+                    urgency: "Optimal",
+                    urgencyColor: "#4CAF50",
+                    isAdjusted: false
+                }}
+                windowStatus="OPTIMAL"
             />
         ).toJSON();
         expect(tree).toMatchSnapshot();
     });
 
-    it('DaylightBar renders correctly', () => {
-        const tree = renderer.create(<DaylightBar />).toJSON();
+    it('MorningLightSlider renders correctly', () => {
+        const tree = renderer.create(<MorningLightSlider goalMinutes={16} />).toJSON();
         expect(tree).toMatchSnapshot();
     });
 

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useAuthStore } from '@/lib/state/auth-store';
 import { ArrowLeft } from 'lucide-react-native';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 export default function OnboardingEmailOTPScreen() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function OnboardingEmailOTPScreen() {
 
       if (result.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.push('/onboarding-permissions');
+        router.push('/onboarding-permission-motion');
       }
     } finally {
       setIsLoading(false);
@@ -108,29 +109,15 @@ export default function OnboardingEmailOTPScreen() {
             </View>
 
             {/* Verify Button */}
-            <Pressable
-              onPress={handleVerify}
-              disabled={otp.length !== 6 || isLoading}
-              className="active:scale-95 mb-4"
-            >
-              <LinearGradient
-                colors={['#FFB347', '#FF8C00', '#FF6B35']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  paddingVertical: 16,
-                  borderRadius: 12,
-                  opacity: otp.length !== 6 || isLoading ? 0.5 : 1,
-                }}
-              >
-                <Text
-                  className="text-lg text-lumis-night text-center"
-                  style={{ fontFamily: 'Outfit_600SemiBold' }}
-                >
-                  {isLoading ? 'Verifying...' : 'Verify Code'}
-                </Text>
-              </LinearGradient>
-            </Pressable>
+            <View className="mb-4">
+              <LumisHeroButton
+                title={isLoading ? 'Verifying...' : 'Verify Code'}
+                onPress={handleVerify}
+                disabled={otp.length !== 6 || isLoading}
+                loading={isLoading}
+                icon={null}
+              />
+            </View>
 
             {/* Resend Timer */}
             <View className="items-center">

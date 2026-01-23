@@ -479,8 +479,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - lumisscreentime (1.0.0):
-    - ExpoModulesCore
   - PurchasesHybridCommon (17.23.0):
     - RevenueCat (= 5.50.0)
   - PurchasesHybridCommonUI (17.23.0):
@@ -3099,7 +3097,6 @@ DEPENDENCIES:
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - ImageColors (from `../node_modules/react-native-image-colors/ios`)
   - lottie-react-native (from `../node_modules/lottie-react-native`)
-  - lumisscreentime (from `../modules/lumisscreentime/ios`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -3371,8 +3368,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-image-colors/ios"
   lottie-react-native:
     :path: "../node_modules/lottie-react-native"
-  lumisscreentime:
-    :path: "../modules/lumisscreentime/ios"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -3646,7 +3641,6 @@ SPEC CHECKSUMS:
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 8bc11e10576d1a3f77f4e0ae5b70503c5c890a09
-  lumisscreentime: 55a74011615f1ea491fa3953db77d3362b4b4d90
   PurchasesHybridCommon: e95a0b9bb01f6e9101d44f411343fb91030e26ae
   PurchasesHybridCommonUI: 476200612e1f5be556ef20327d5da8886d657a3d
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82

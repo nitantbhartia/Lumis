@@ -53,21 +53,25 @@ export default function OnboardingAuthScreen() {
         ],
       });
 
-      const fullName = credential.fullName?.givenName
-        ? `${credential.fullName.givenName} ${credential.fullName.familyName || ''}`.trim()
-        : 'Apple User';
+      const hasName = credential.fullName?.givenName;
+      const fullName = hasName
+        ? `${credential.fullName?.givenName} ${credential.fullName?.familyName || ''}`.trim()
+        : null;
 
       const result = await socialLogin({
         provider: 'apple',
         idToken: credential.identityToken!,
         email: credential.email,
-        name: fullName,
+        name: fullName || undefined,
       });
 
       if (result.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setUserName(fullName);
-        router.push('/onboarding-success');
+        if (fullName) {
+          setUserName(fullName);
+        }
+        // Returning user - go directly to dashboard
+        router.replace('/(tabs)');
       }
     } catch (e: any) {
       if (e.code !== 'ERR_CANCELED') {

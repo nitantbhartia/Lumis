@@ -1,60 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { formatFirstName } from '@/lib/utils/name-utils';
+import { MissionBriefing } from '@/lib/hooks/useMissionBriefing';
 
 interface MissionBriefingProps {
-    weatherCondition: string;
-    hoursSinceSunrise: number;
-    streak: number;
-    userName: string | null;
+    mission: MissionBriefing;
+    windowStatus: string;
 }
 
-const getMissionBriefing = (weatherCondition: string, hoursSinceSunrise: number, streak: number, name: string) => {
-    const condition = weatherCondition.toLowerCase();
-    const isCloudy = condition.includes('cloud') || condition.includes('rain') || condition.includes('overcast');
-    const isClear = condition.includes('sunny') || condition.includes('clear');
+export const MissionBriefingCard = ({ mission, windowStatus }: MissionBriefingProps) => {
+    // Determine window status based on prop or context? 
+    // The previous implementation calculated windowStatus inside the component based on hoursSinceSunrise.
+    // For now, let's keep it simple or accept it as a prop if needed.
+    // Ideally, the hook should provide everything, or we pass windowStatus too.
+    // Let's assume the parent passes the mission.
+    // Wait, the original prop list had 'hoursSinceSunrise'.
+    // Let's modify the props to just take the mission, OR we can keep hoursSinceSunrise just for the window display
+    // But the user wants consistency. The hook is the source of truth.
 
-    // Logic Flow: Streak -> Clear -> Cloudy
-
-    // 1. Streak Defense (Priority if streak is good)
-    if (streak >= 4) {
-        return {
-            title: "Streak Defense",
-            message: `You've unlocked your apps before 8 AM for ${streak} days straight. Don't let the streak break today.`,
-            luxScore: "Streak: " + streak,
-            duration: "10 min",
-            urgency: "High Priority",
-            urgencyColor: "#FF6B6B" // Red
-        };
-    }
-
-    // 2. Clear Sky Sprint
-    if (isClear || !isCloudy) {
-        return {
-            title: "Clear Sky Sprint",
-            message: `${name}, local light is at peak Lux (10,000+). Your mission today is a 10-minute sprint to full energy.`,
-            luxScore: "10,000+ Lux",
-            duration: "10-12 min",
-            urgency: "Optimal",
-            urgencyColor: "#4CAF50" // Green
-        };
-    }
-
-    // 3. Cloudy Anchor Protocol
-    return {
-        title: "Cloudy Anchor Protocol",
-        message: `Heavy overcast detected. We’ve adjusted your goal to 22 minutes to ensure your clock stays anchored.`,
-        luxScore: "~2,500 Lux",
-        duration: "20-25 min",
-        urgency: "Adjusted",
-        urgencyColor: "#FF9800" // Orange
-    };
-};
-
-export const MissionBriefingCard = ({ weatherCondition, hoursSinceSunrise, streak, userName }: MissionBriefingProps) => {
-    const name = formatFirstName(userName) || 'User';
-    const mission = getMissionBriefing(weatherCondition, hoursSinceSunrise, streak, name);
-    const windowStatus = hoursSinceSunrise < 2 ? "OPTIMAL" : hoursSinceSunrise < 4 ? "GOOD" : "CLOSING";
+    // Actually, let's keep the component dumb and just render what it gets.
+    // But we need 'windowStatus'. Let's calculate it here or pass it.
+    // Simpler: Pass it as a prop.
 
     return (
         <View style={styles.missionCard}>
@@ -86,6 +51,8 @@ export const MissionBriefingCard = ({ weatherCondition, hoursSinceSunrise, strea
         </View>
     );
 };
+
+// ... unused logic removed ...
 
 const styles = StyleSheet.create({
     missionCard: {

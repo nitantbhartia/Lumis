@@ -7,7 +7,8 @@ import {
     getSelectedAppCount as nativeGetSelectedAppCount,
     isShieldActive as nativeIsShieldActive,
     getAppToggles as nativeGetAppToggles,
-    toggleApp as nativeToggleApp
+    toggleApp as nativeToggleApp,
+    LumisIcon
 } from 'lumisscreentime';
 import { requireNativeModule } from 'expo-modules-core';
 import { Platform, Alert, Linking } from 'react-native';
@@ -35,14 +36,13 @@ export const getScreenTimePermissionStatus = async (): Promise<boolean> => {
         return status === 'approved';
     } catch (error: any) {
         console.error('[ScreenTime] Error checking status:', error);
-        Alert.alert("Status Check Error", error?.message || "Could not get permission status");
         return false;
     }
 };
 
 export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
     if (!isAvailable) {
-        Alert.alert("Debug", "Platform NOT supported (needs iOS)");
+        console.log('[ScreenTime] Platform NOT supported (needs iOS)');
         return false;
     }
     try {
@@ -73,7 +73,6 @@ export const requestScreenTimeAuthorization = async (): Promise<boolean> => {
         return finalStatus;
     } catch (error: any) {
         console.error('[ScreenTime] Authorization flow error:', error);
-        Alert.alert("Flow Error", error?.message || "Flow failed");
         return await getScreenTimePermissionStatus();
     }
 };
@@ -93,7 +92,7 @@ export const debugForcePermission = (): boolean => {
 export interface PickerResult {
     success: boolean;
     count: number;
-    toggles: { name: string; isEnabled: boolean; isCategory?: boolean }[];
+    toggles: { name: string; isEnabled: boolean; isCategory?: boolean; token?: string }[];
 }
 
 export const showAppPicker = async (): Promise<PickerResult> => {
@@ -150,7 +149,6 @@ export const showAppPicker = async (): Promise<PickerResult> => {
         return defaultResult;
     } catch (error: any) {
         console.error('[ScreenTime] Error showing app picker:', error);
-        Alert.alert("Native Picker Error", error?.message || "Unknown error");
         return defaultResult;
     }
 };
@@ -190,7 +188,7 @@ export const deactivateShield = (): boolean => {
 /**
  * Get the list of apps selected in the native picker and their status
  */
-export const getAppToggles = (): { name: string, isEnabled: boolean, isCategory?: boolean }[] => {
+export const getAppToggles = (): { name: string, isEnabled: boolean, isCategory?: boolean, token?: string }[] => {
     if (!isAvailable) return [];
     try {
         return nativeGetAppToggles();
@@ -259,3 +257,5 @@ export const setAppRestrictions = async (appIds: string[]): Promise<boolean> => 
 export const clearAppRestrictions = async (): Promise<boolean> => {
     return deactivateShield();
 };
+
+export { LumisIcon };

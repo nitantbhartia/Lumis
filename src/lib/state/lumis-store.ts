@@ -10,6 +10,8 @@ export interface BlockedApp {
   name: string;
   icon: string;
   isBlocked: boolean;
+  isCategory?: boolean;
+  token?: string;
 }
 
 export interface DailyProgress {

@@ -292,6 +292,22 @@ export default function SettingsScreen() {
                 <Text className="text-error text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>SIGN OUT</Text>
               </View>
             </Pressable>
+
+            {/* DEV: Reset Onboarding */}
+            {__DEV__ && (
+              <Pressable
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  useLumisStore.getState().setHasCompletedOnboarding(false);
+                  router.replace('/');
+                }}
+                className="active:scale-95 mt-4"
+              >
+                <View className="flex-row items-center justify-center gap-2 py-4 border border-dashed border-white/20 rounded-xl">
+                  <Text className="text-lumis-golden text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>🔄 Reset Onboarding (DEV)</Text>
+                </View>
+              </Pressable>
+            )}
           </Animated.View>
         </ScrollView>
       </LinearGradient>

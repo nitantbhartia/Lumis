@@ -13,6 +13,18 @@
 export const formatFirstName = (name: string | null | undefined): string => {
     if (!name) return '';
 
+    const lowercaseName = name.toLowerCase().trim();
+
+    // Ignore generic placeholders
+    if (
+        lowercaseName === 'apple user' ||
+        lowercaseName === 'apple' ||
+        lowercaseName === 'explorer' ||
+        lowercaseName === 'user'
+    ) {
+        return '';
+    }
+
     // Get the first part of the name
     const firstName = name.trim().split(' ')[0];
 

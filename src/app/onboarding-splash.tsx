@@ -39,7 +39,7 @@ export default function OnboardingSplashScreen() {
 
     // Auto-navigate after 3 seconds
     const timer = setTimeout(() => {
-      router.push('/onboarding-question-sunlight');
+      router.push('/onboarding-trap');
     }, 3000);
 
     return () => clearTimeout(timer);

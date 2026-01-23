@@ -38,6 +38,8 @@ const iconMap: Record<string, React.ReactNode> = {
   'message-circle': <MessageCircle size={28} color="#1A1A2E" strokeWidth={1.5} />,
   ghost: <Ghost size={28} color="#1A1A2E" strokeWidth={1.5} />,
   film: <Film size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  shield: <Shield size={28} color="#1A1A2E" strokeWidth={1.5} />,
+  layers: <Shield size={28} color="#1A1A2E" strokeWidth={1.5} />,
 };
 
 export default function AppSelectionScreen() {
@@ -110,16 +112,36 @@ export default function AppSelectionScreen() {
             </Text>
           </View>
 
-          {/* Selection counter */}
-          <View style={styles.counterSection}>
-            <View style={styles.counterCard}>
-              <View style={styles.counterCircle}>
-                <Text style={styles.counterValue}>{selectedCount}</Text>
-              </View>
-              <Text style={styles.counterText}>
-                {selectedCount === 1 ? 'app' : 'apps'} will be shielded each morning
-              </Text>
+          {/* Animated Icon Stack (Aha Moment) */}
+          <View style={styles.stackSection}>
+            <View style={styles.iconStack}>
+              {blockedApps.filter(app => app.isBlocked).map((app, index) => (
+                <Animated.View
+                  key={`${app.id}-${index}`}
+                  entering={FadeInDown.springify()}
+                  layout={Layout.springify()}
+                  style={[
+                    styles.stackIconWrapper,
+                    { zIndex: 10 - index, marginLeft: index === 0 ? 0 : -20 }
+                  ]}
+                >
+                  <View style={styles.innerIcon}>
+                    {React.cloneElement((iconMap[app.icon] || <Shield size={32} color="#FF8C00" />) as React.ReactElement<any>, {
+                      color: '#FF8C00',
+                      size: 32
+                    })}
+                  </View>
+                </Animated.View>
+              ))}
+              {selectedCount === 0 && (
+                <View style={[styles.stackIconWrapper, { backgroundColor: 'rgba(255,255,255,0.3)', borderStyle: 'dashed' }]}>
+                  <Shield size={32} color="rgba(0,0,0,0.2)" strokeWidth={1} />
+                </View>
+              )}
             </View>
+            <Text style={styles.counterText}>
+              {selectedCount === 0 ? 'Select apps to shield' : `${selectedCount} ${selectedCount === 1 ? 'app' : 'apps'} locked for morning light`}
+            </Text>
           </View>
 
           {/* App list */}
@@ -130,7 +152,7 @@ export default function AppSelectionScreen() {
           >
             {blockedApps.map((app, index) => (
               <Animated.View
-                key={app.id}
+                key={`${app.id}-${index}`}
                 entering={FadeInDown.delay(index * 50).duration(400)}
                 layout={Layout.springify()}
                 style={styles.appItemContainer}
@@ -227,35 +249,40 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 22,
   },
-  counterSection: {
+  stackSection: {
     paddingHorizontal: 24,
-    marginBottom: 16,
-  },
-  counterCard: {
-    flexDirection: 'row',
+    marginBottom: 24,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    borderRadius: 20,
-    padding: 12,
   },
-  counterCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFB347',
+  iconStack: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    height: 64,
+    alignItems: 'center',
+  },
+  stackIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#FFB347',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  counterValue: {
-    fontSize: 18,
-    fontFamily: 'Outfit_700Bold',
-    color: '#1A1A2E',
+  innerIcon: {
+    transform: [{ scale: 1.1 }],
   },
   counterText: {
-    fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
     color: '#1A1A2E',
+    textAlign: 'center',
   },
   appList: {
     flex: 1,

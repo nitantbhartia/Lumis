@@ -1,66 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Switch, Image, Dimensions, Platform, ActivityIndicator, Alert, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Switch, Dimensions, Platform, ActivityIndicator, Alert, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Shield, Lock, Unlock, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Ghost, Film, AlertCircle, Plus, Check, Layers, Search, Target, X } from 'lucide-react-native';
+import { Shield, Lock, Unlock, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Ghost, Film, AlertCircle, Plus, Check, Search, Target, X, Zap, Clock, Brain } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import * as Haptics from 'expo-haptics';
-import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp } from '@/lib/screen-time';
+import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp, LumisIcon } from '@/lib/screen-time';
+import { useFocusEffect } from 'expo-router';
+import { CoolDownModal } from '@/components/CoolDownModal';
+import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
+import { ShieldPreviewRow } from '@/components/ShieldPreviewRow';
+import { BlurView } from 'expo-blur';
+import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
 
 const { width } = Dimensions.get('window');
 
-const AppIcon = ({ id, color }: { id: string, color: string }) => {
-    switch (id) {
-        case 'instagram': return <Instagram size={24} color={color} />;
-        case 'tiktok': return <Video size={24} color={color} />;
-        case 'twitter': return <Twitter size={24} color={color} />;
-        case 'facebook': return <Facebook size={24} color={color} />;
-        case 'youtube': return <Youtube size={24} color={color} />;
-        case 'reddit': return <MessageCircle size={24} color={color} />;
-        case 'snapchat': return <Ghost size={24} color={color} />;
-        case 'netflix': return <Film size={24} color={color} />;
-        default: return <Shield size={24} color={color} />;
-    }
-};
-
-import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+// ... (keep AppIcon if needed, but we use LumisIcon mostly now)
 
 export default function ShieldHub() {
     const insets = useSafeAreaInsets();
-    const { blockedApps, toggleAppBlocked, isTrackingActive, dailyGoalMinutes, todayProgress } = useLumisStore();
+    const { blockedApps, toggleAppBlocked, dailyGoalMinutes, todayProgress } = useLumisStore();
+    const { lux } = useSmartEnvironment();
 
     const [hasPermission, setHasPermission] = useState(false);
     const [isPickerLoading, setIsPickerLoading] = useState(false);
     const [nativeAppCount, setNativeAppCount] = useState(0);
     const [shieldStatus, setShieldStatus] = useState(false);
-    const [nativeAppToggles, setNativeAppToggles] = useState<{ name: string, isEnabled: boolean }[]>([]);
+    const [nativeAppToggles, setNativeAppToggles] = useState<{ name: string, isEnabled: boolean, isCategory?: boolean, token?: string }[]>([]);
     const [showInstructions, setShowInstructions] = useState(false);
+    const [showBreakModal, setShowBreakModal] = useState(false);
 
-    // Check permission and app count on focus
-    useEffect(() => {
-        // Initialization logic if needed
-    }, []);
+    // Filter active apps for preview
+    const activeBlockedApps = useMemo(() => nativeAppToggles.filter(a => a.isEnabled), [nativeAppToggles]);
 
     useFocusEffect(
         useCallback(() => {
             const checkStatus = async () => {
-                if (Platform.OS === 'ios') {
-                    // Test bridge
-                    try {
-                        const { hello } = require('lumisscreentime');
-                        console.log('[Shield] Bridge test:', hello());
-                    } catch (e) {
-                        console.error('[Shield] Bridge test failed:', e);
-                    }
-
-                    const status = await getScreenTimePermissionStatus();
-                    setHasPermission(status);
-                    if (status) {
-                        setNativeAppCount(getSelectedAppCount());
-                        setShieldStatus(isShieldActive());
-                        setNativeAppToggles(getAppToggles());
-                    }
+                const status = await getScreenTimePermissionStatus();
+                setHasPermission(status);
+                if (status) {
+                    setNativeAppCount(getSelectedAppCount());
+                    setShieldStatus(isShieldActive());
+                    setNativeAppToggles(getAppToggles());
                 }
             };
             checkStatus();
@@ -68,50 +49,34 @@ export default function ShieldHub() {
     );
 
     const isGoalMet = todayProgress.lightMinutes >= dailyGoalMinutes;
-    const isLocked = !isGoalMet;
-
-    const handleToggle = (id: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        toggleAppBlocked(id);
+    const isLocked = shieldStatus && !isGoalMet;
+    const details = isLocked ? {
+        lightRemaining: Math.max(0, dailyGoalMinutes - todayProgress.lightMinutes),
+        statusText: "Shielding Active",
+        statusColor: "#FF6B6B"
+    } : {
+        lightRemaining: 0,
+        statusText: "Systems Normal",
+        statusColor: "#4CAF50"
     };
 
     const handleRequestPermission = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setIsPickerLoading(true);
         try {
-            console.log('[Shield] Calling requestScreenTimeAuthorization...');
             const result = await requestScreenTimeAuthorization();
-            console.log('[Shield] requestScreenTimeAuthorization result:', result);
-
             if (result) {
                 setHasPermission(true);
                 Alert.alert("Success", "Screen Time permission granted!");
-                // Proactively open the picker for the user
-                setTimeout(() => {
-                    handleChooseApps();
-                }, 500);
+                setTimeout(() => handleChooseApps(), 500);
             } else {
                 setHasPermission(false);
-                Alert.alert("Permission Denied", "Please enable Screen Time in Settings > Screen Time > Content & Privacy Restrictions.");
+                Alert.alert("Permission Denied", "Please enable Screen Time in Settings.");
             }
         } catch (error: any) {
-            console.error('[Shield] Permission error:', error);
-            Alert.alert("Error", `Failed to request permission: ${error?.message || 'Unknown error'}`);
+            Alert.alert("Error", `Failed to request permission: ${error?.message}`);
         } finally {
             setIsPickerLoading(false);
-        }
-    };
-
-    const handleNativeAppToggle = (name: string, isEnabled: boolean) => {
-        Haptics.selectionAsync();
-        toggleNativeApp(name, isEnabled);
-        // Refresh toggles and count
-        setNativeAppToggles(getAppToggles());
-        setNativeAppCount(getSelectedAppCount());
-
-        // If the shield is already active, we might need to re-activate to apply changes
-        if (shieldStatus) {
-            activateShield();
         }
     };
 
@@ -124,294 +89,213 @@ export default function ShieldHub() {
         setShowInstructions(false);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setIsPickerLoading(true);
-        console.log('[Shield] openNativePicker called - waiting for modal to close');
-
-        // Wait for modal animation to finish
         setTimeout(async () => {
             try {
-                console.log('[Shield] Calling showAppPicker...');
                 const result = await showAppPicker();
-                console.log('[Shield] showAppPicker returned:', result);
-
                 if (result && result.success) {
-                    const count = result.count;
-                    const toggles = result.toggles;
-
-                    console.log(`[Shield] Selection saved. Count: ${count}, Toggles: ${toggles.length}`);
-
-                    setNativeAppCount(count);
-                    setNativeAppToggles(toggles);
-
-                    if (count === 0 && toggles.length > 0) {
-                        setNativeAppCount(toggles.length);
+                    setNativeAppCount(result.count);
+                    setNativeAppToggles(result.toggles);
+                    if (result.count === 0 && result.toggles.length > 0) {
+                        setNativeAppCount(result.toggles.length);
                     }
                 }
             } catch (error: any) {
-                console.error('[Shield] Picker error:', error);
-                Alert.alert("Picker Error", error?.message || "Could not open app picker");
+                Alert.alert("Picker Error", error?.message);
             } finally {
-                console.log('[Shield] openNativePicker finally');
                 setIsPickerLoading(false);
             }
         }, 600);
     };
 
     const handleActivateShield = () => {
+        if (!hasPermission) {
+            handleRequestPermission();
+            return;
+        }
+        if (nativeAppCount === 0) {
+            Alert.alert("No Apps Selected", "Please select apps to shield first.");
+            return;
+        }
+
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         const result = activateShield();
         setShieldStatus(result);
-        if (result) {
-            Alert.alert("Shield Active", "Selected apps are now blocked.");
-        } else {
-            Alert.alert("Shield Failed", "Could not activate the shield. Please check permissions.");
-        }
     };
 
-    const handleDeactivateShield = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const handleBreakProtocol = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setShowBreakModal(true);
+    };
+
+    const executeBreak = () => {
+        setShowBreakModal(false);
         deactivateShield();
         setShieldStatus(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
     return (
         <View style={{ flex: 1, backgroundColor: '#1A1A2E' }}>
             <LinearGradient
-                colors={['#1A1A2E', '#16213E', '#0F3460']}
+                colors={['#0F172A', '#1E293B']}
                 style={{ flex: 1 }}
             >
                 <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: 20 }}>
                     <View style={styles.headerRow}>
-                        <Shield size={28} color="#FFB347" fill="#FFB347" />
-                        <Text style={styles.headerTitle}>Shields (TEST)</Text>
+                        <Zap size={24} color="#FFD700" fill="#FFD700" />
+                        <Text style={styles.headerTitle}>Mission Control</Text>
                     </View>
                     <Text style={styles.headerSubtitle}>
-                        Manage your distractions. Blocked apps stay locked until you get your morning light.
+                        Your biological firewall.
                     </Text>
                 </View>
 
                 <ScrollView
-                    contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* iOS Native App Picker Section */}
-                    {Platform.OS === 'ios' && (
-                        <View style={styles.nativeSection}>
-                            <Text style={styles.sectionTitle}>Screen Time Shield</Text>
+                    {/* Active Shield Card */}
+                    <BlurView intensity={20} tint="light" style={[styles.statusCard, isLocked ? styles.statusCardLocked : styles.statusCardUnlocked]}>
+                        <View style={styles.statusContent}>
+                            <View style={styles.statusTop}>
+                                {isLocked ? <Lock size={24} color="#FF6B6B" /> : <Shield size={24} color="#4CAF50" />}
+                                <Text style={[styles.statusTitle, { color: details.statusColor }]}>
+                                    {isLocked ? "SHIELD ACTIVE" : "SYSTEMS NORMAL"}
+                                </Text>
+                            </View>
 
-                            {!hasPermission ? (
-                                <View style={{ gap: 12 }}>
-                                    <Pressable
-                                        style={[styles.permissionButton, isPickerLoading && { opacity: 0.7 }]}
-                                        onPress={handleRequestPermission}
-                                        disabled={isPickerLoading}
-                                    >
-                                        <LinearGradient
-                                            colors={['#FFB347', '#FF8C00']}
-                                            style={styles.permissionGradient}
-                                        >
-                                            {isPickerLoading ? (
-                                                <ActivityIndicator color="#1A1A2E" size="small" />
-                                            ) : (
-                                                <>
-                                                    <Shield size={20} color="#1A1A2E" />
-                                                    <Text style={styles.permissionButtonText}>Enable Screen Time Access</Text>
-                                                </>
-                                            )}
-                                        </LinearGradient>
-                                    </Pressable>
-                                    <Pressable
-                                        onPress={() => {
-                                            setHasPermission(true);
-                                            Haptics.selectionAsync();
-                                        }}
-                                        style={{ alignSelf: 'center', marginTop: 8 }}
-                                    >
-                                        <Text style={{ color: '#666', fontSize: 12, textDecorationLine: 'underline' }}>
-                                            Debug: I've already enabled it (Bypass)
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                            ) : (
-                                <>
-                                    <View style={styles.reminderCard}>
-                                        <AlertCircle size={18} color="#FFB347" />
-                                        <Text style={styles.reminderText}>
-                                            <Text style={{ fontWeight: 'bold' }}>Important:</Text> Apps MUST be selected in the System Picker below to be blocked.
+                            {isLocked ? (
+                                <View style={{ gap: 16 }}>
+                                    <View style={styles.countdownContainer}>
+                                        <Clock size={16} color="#FF6B6B" style={{ marginTop: 2 }} />
+                                        <Text style={styles.countdownText}>
+                                            <Text style={{ fontFamily: 'Outfit_700Bold' }}>{details.lightRemaining}m</Text> light remaining
                                         </Text>
                                     </View>
 
-                                    <Pressable
-                                        style={styles.chooseAppsButton}
-                                        onPress={handleChooseApps}
-                                        disabled={isPickerLoading}
-                                    >
-                                        {isPickerLoading ? (
-                                            <ActivityIndicator color="#FFB347" />
-                                        ) : (
-                                            <>
-                                                <Plus size={20} color="#FFB347" />
-                                                <Text style={styles.chooseAppsText}>
-                                                    {nativeAppCount > 0
-                                                        ? `${nativeAppCount} Apps Selected — Tap to Edit`
-                                                        : 'Open System App Picker'}
-                                                </Text>
-                                            </>
-                                        )}
-                                    </Pressable>
-
-                                    {nativeAppCount > 0 && (
-                                        <View style={styles.shieldControlRow}>
-                                            <Pressable
-                                                style={[styles.shieldButton, shieldStatus && styles.shieldButtonActive]}
-                                                onPress={shieldStatus ? handleDeactivateShield : handleActivateShield}
-                                            >
-                                                {shieldStatus ? (
-                                                    <>
-                                                        <Unlock size={18} color="#4CAF50" />
-                                                        <Text style={[styles.shieldButtonText, { color: '#4CAF50' }]}>Deactivate Shield</Text>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Lock size={18} color="#FF6B6B" />
-                                                        <Text style={[styles.shieldButtonText, { color: '#FF6B6B' }]}>Activate Shield Now</Text>
-                                                    </>
-                                                )}
-                                            </Pressable>
-                                        </View>
-                                    )}
-                                </>
-                            )}
-                        </View>
-                    )}
-
-                    <View style={styles.statusCard}>
-                        <LinearGradient
-                            colors={isLocked ? ['rgba(255, 107, 107, 0.15)', 'rgba(255, 107, 107, 0.05)'] : ['rgba(76, 175, 80, 0.15)', 'rgba(76, 175, 80, 0.05)']}
-                            style={StyleSheet.absoluteFill}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        />
-                        <View style={styles.statusHeader}>
-                            {isLocked ? (
-                                <Lock size={20} color="#FF6B6B" />
+                                    {/* Shield Preview Row (Horizontal Scroll) */}
+                                    <ShieldPreviewRow activeApps={activeBlockedApps} lux={lux} />
+                                </View>
                             ) : (
-                                <Unlock size={20} color="#4CAF50" />
+                                <Text style={styles.statusDesc}>
+                                    {shieldStatus ? "Sunlight goal met. Apps unlocked." : "Shield is currently inactive."}
+                                </Text>
                             )}
-                            <Text style={[styles.statusTitle, { color: isLocked ? '#FF6B6B' : '#4CAF50' }]}>
-                                {isLocked ? 'APPS LOCKED' : 'APPS UNLOCKED'}
-                            </Text>
                         </View>
-                        <Text style={styles.statusDescription}>
-                            {isLocked
-                                ? `Get ${Math.max(0, dailyGoalMinutes - todayProgress.lightMinutes)} more minutes of sunlight to unlock your shielded apps.`
-                                : "You've met your daily light goal! All apps are available."
-                            }
-                        </Text>
-                    </View>
+                    </BlurView>
 
-                    <Text style={styles.sectionTitle}>
-                        {nativeAppToggles.length > 0 ? 'Shielded Apps' : 'Quick Toggles'}
-                    </Text>
+                    {/* Apps Section */}
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.sectionContainer}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Shielded Targets</Text>
+                                <Pressable hitSlop={10} onPress={hasPermission ? handleChooseApps : handleRequestPermission}>
+                                    <Text style={styles.editLink}>
+                                        {hasPermission ? "Edit Targets" : "Grant Permission"}
+                                    </Text>
+                                </Pressable>
+                            </View>
 
-                    {nativeAppToggles.length > 0 ? (
-                        // Show actual apps from native picker
-                        nativeAppToggles.map((app, index) => (
-                            <View key={`${app.name}-${index}`} style={styles.appRow}>
-                                <View style={styles.appIconContainer}>
-                                    <Shield size={24} color="#FFF" />
+                            {nativeAppToggles.length > 0 ? (
+                                <View style={styles.gridContainer}>
+                                    {nativeAppToggles.map((app, index) => (
+                                        <View key={`${app.name}-${index}`} style={[styles.gridItem, isLocked && styles.gridItemLocked]}>
+                                            {app.token ? (
+                                                <LumisIcon
+                                                    style={{ width: 40, height: 40 }}
+                                                    iconProps={{
+                                                        tokenData: app.token,
+                                                        isCategory: !!app.isCategory,
+                                                        size: 40,
+                                                        grayscale: isLocked
+                                                    }}
+                                                />
+                                            ) : (
+                                                <View style={[styles.gridIcon, isLocked && styles.grayscale]}>
+                                                    <Shield size={20} color={isLocked ? "#666" : "#FFF"} />
+                                                </View>
+                                            )}
+                                            <Text style={[styles.gridName, isLocked && { color: "#666" }]} numberOfLines={1}>{app.name}</Text>
+                                        </View>
+                                    ))}
                                 </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.appName}>{app.name}</Text>
-                                    <Text style={styles.appStatus}>
-                                        {app.isEnabled ? (isLocked ? '🔒 Managed by Shield' : '🔓 Active') : 'Shield Disabled'}
-                                    </Text>
-                                </View>
-                                <Switch
-                                    value={app.isEnabled}
-                                    onValueChange={(val) => handleNativeAppToggle(app.name, val)}
-                                    trackColor={{ false: '#333', true: '#FFB347' }}
-                                    thumbColor="#FFF"
-                                />
-                            </View>
-                        ))
-                    ) : (
-                        // Fallback to mock apps
-                        blockedApps.map((app) => (
-                            <View key={app.id} style={styles.appRow}>
-                                <View style={styles.appIconContainer}>
-                                    <AppIcon id={app.id} color="#FFF" />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.appName}>{app.name}</Text>
-                                    <Text style={styles.appStatus}>
-                                        {app.isBlocked ? (isLocked ? '🔒 Locked' : '🔓 Unlocked by Sun') : 'Always Available'}
-                                    </Text>
-                                </View>
-                                <Switch
-                                    value={app.isBlocked}
-                                    onValueChange={() => handleToggle(app.id)}
-                                    trackColor={{ false: '#333', true: '#FFB347' }}
-                                    thumbColor="#FFF"
-                                />
-                            </View>
-                        ))
+                            ) : (
+                                <Pressable
+                                    style={styles.emptyStateCard}
+                                    onPress={hasPermission ? handleChooseApps : handleRequestPermission}
+                                >
+                                    <Plus size={24} color="#A0A0A0" />
+                                    <Text style={styles.emptyStateText}>Select apps to shield</Text>
+                                </Pressable>
+                            )}
+                        </View>
                     )}
-
-                    <View style={styles.proTipContainer}>
-                        <AlertCircle size={16} color="#A0A0A0" />
-                        <Text style={styles.proTipText}>
-                            Use "Screen Time Shield" above to block apps at the iOS level. Quick toggles are for in-app tracking only.
-                        </Text>
-                    </View>
-
                 </ScrollView>
+
+                {/* Bottom Controls */}
+                <View style={[styles.bottomControls, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+                    {shieldStatus ? (
+                        <>
+                            {/* Active Shield State */}
+                            <LumisHeroButton
+                                title={isLocked ? `Unlocks in ${details.lightRemaining}m` : "Mission Complete"}
+                                onPress={() => { }}
+                                disabled={isLocked}
+                                icon={isLocked ? <Lock size={20} color="#666" /> : <Unlock size={20} color="#1A1A2E" />}
+                                style={{ marginBottom: 12, opacity: isLocked ? 0.8 : 1 }}
+                            />
+
+                            {isLocked && (
+                                <Pressable style={styles.breakProtocolButton} onPress={handleBreakProtocol}>
+                                    <AlertCircle size={14} color="#FF6B6B" />
+                                    <Text style={styles.breakProtocolText}>Emergency Break Protocol</Text>
+                                </Pressable>
+                            )}
+
+                            {!isLocked && (
+                                <Pressable style={styles.breakProtocolButton} onPress={() => { deactivateShield(); setShieldStatus(false); }}>
+                                    <Text style={styles.breakProtocolText}>Deactivate Shield</Text>
+                                </Pressable>
+                            )}
+                        </>
+                    ) : (
+                        /* Inactive State -> Activate */
+                        <LumisHeroButton
+                            title="Engage Shield"
+                            onPress={handleActivateShield}
+                            icon={<Shield size={20} color="#1A1A2E" />}
+                        />
+                    )}
+                </View>
+
             </LinearGradient>
 
-            {/* Instruction Overlay Modal */}
+            <CoolDownModal
+                visible={showBreakModal}
+                onComplete={executeBreak}
+            />
+
+            {/* Instruction Overlay reused logic */}
             <Modal
                 visible={showInstructions}
                 transparent={true}
                 animationType="fade"
                 onRequestClose={() => setShowInstructions(false)}
             >
+                {/* ... (keep instructions overlay content same as before) ... */}
                 <View style={styles.instructionsOverlay}>
                     <View style={styles.instructionsCard}>
-                        {/* Close Button */}
-                        <Pressable
-                            style={{ position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 10 }}
-                            onPress={() => setShowInstructions(false)}
-                        >
+                        <Pressable style={styles.closeButton} onPress={() => setShowInstructions(false)}>
                             <X size={20} color="#94A3B8" />
                         </Pressable>
-
                         <View style={styles.instructionIconCircle}>
                             <Target size={32} color="#FFB347" />
                         </View>
-
-                        <Text style={styles.instructionTitle}>Select Your "Big 3"</Text>
-                        <Text style={styles.instructionText}>
-                            The next screen shows all your apps. For best results, ignore the noise and focus on just 3 things:
-                        </Text>
-
-                        <View style={styles.instructionStep}>
-                            <Layers size={20} color="#FFB347" />
-                            <Text style={styles.instructionStepText}>Use <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Categories</Text> to block Social & Games in one tap.</Text>
-                        </View>
-
-                        <View style={styles.instructionStep}>
-                            <Search size={20} color="#FFB347" />
-                            <Text style={styles.instructionStepText}>Use the <Text style={{ fontWeight: 'bold', color: '#FFF' }}>Search Bar</Text> to find specific apps quickly.</Text>
-                        </View>
-
-                        <Pressable
-                            style={styles.instructionButton}
-                            onPress={openNativePicker}
-                        >
-                            <LinearGradient
-                                colors={['#FFB347', '#FF8C00']}
-                                style={styles.instructionButtonGradient}
-                            >
-                                <Text style={styles.instructionButtonText}>I'm Ready — Select Apps</Text>
+                        <Text style={styles.instructionTitle}>Select Targets</Text>
+                        <Text style={styles.instructionText}>Identify the biological disruptors (Social, Games) you want to shield.</Text>
+                        <Pressable style={styles.instructionButton} onPress={openNativePicker}>
+                            <LinearGradient colors={['#FFB347', '#FF8C00']} style={styles.instructionButtonGradient}>
+                                <Text style={styles.instructionButtonText}>Open System Picker</Text>
                             </LinearGradient>
                         </Pressable>
                     </View>
@@ -422,199 +306,173 @@ export default function ShieldHub() {
 }
 
 const styles = StyleSheet.create({
+
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        marginBottom: 8,
+        marginBottom: 4,
     },
     headerTitle: {
-        fontSize: 32,
+        fontSize: 28,
         fontFamily: 'Outfit_700Bold',
         color: '#FFFFFF',
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        fontSize: 16,
-        fontFamily: 'Outfit_400Regular',
-        color: '#A0A0A0',
-        lineHeight: 22,
+        fontSize: 14,
+        fontFamily: 'Outfit_500Medium',
+        color: '#94A3B8',
+        marginLeft: 36,
     },
     statusCard: {
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 32,
+        borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        marginBottom: 32,
     },
-    statusHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
+    statusCardLocked: {
+        borderColor: 'rgba(220, 38, 38, 0.3)',
     },
-    statusTitle: {
-        fontSize: 14,
-        fontFamily: 'Outfit_700Bold',
-        letterSpacing: 1,
+    statusCardUnlocked: {
+        borderColor: 'rgba(16, 185, 129, 0.3)',
     },
-    statusDescription: {
-        fontSize: 16,
-        fontFamily: 'Outfit_500Medium',
-        color: '#FFFFFF',
-        lineHeight: 22,
+    statusContent: {
+        padding: 24,
     },
-    sectionTitle: {
-        fontSize: 20,
-        fontFamily: 'Outfit_600SemiBold',
-        color: '#FFFFFF',
-        marginBottom: 16,
-    },
-    appRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-    },
-    appIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
-    },
-    appName: {
-        fontSize: 16,
-        fontFamily: 'Outfit_600SemiBold',
-        color: '#FFFFFF',
-        marginBottom: 2,
-    },
-    appStatus: {
-        fontSize: 12,
-        fontFamily: 'Outfit_500Medium',
-        color: '#A0A0A0',
-    },
-    proTipContainer: {
+    statusTop: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        marginTop: 24,
-        padding: 16,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 12,
+        marginBottom: 12,
     },
-    proTipText: {
-        flex: 1,
-        fontSize: 12,
-        fontFamily: 'Outfit_500Medium',
-        color: '#A0A0A0',
-        lineHeight: 18,
+    statusTitle: {
+        fontSize: 16,
+        fontFamily: 'Outfit_700Bold',
+        letterSpacing: 2,
     },
-    nativeSection: {
+    countdownContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+    },
+    countdownText: {
+        fontSize: 24,
+        fontFamily: 'Outfit_300Light',
+        color: '#FFF',
+        lineHeight: 32,
+    },
+    statusDesc: {
+        fontSize: 16,
+        fontFamily: 'Outfit_400Regular',
+        color: '#94A3B8',
+    },
+    sectionContainer: {
         marginBottom: 24,
     },
-    permissionButton: {
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    permissionGradient: {
+    sectionHeader: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        marginBottom: 16,
     },
-    permissionButtonText: {
-        fontSize: 16,
+    sectionTitle: {
+        fontSize: 18,
         fontFamily: 'Outfit_600SemiBold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
     },
-    chooseAppsButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        backgroundColor: 'rgba(255, 179, 71, 0.1)',
-        borderWidth: 1,
-        borderColor: '#FFB347',
-        borderStyle: 'dashed',
-        borderRadius: 16,
-        paddingVertical: 20,
-        paddingHorizontal: 24,
-    },
-    chooseAppsText: {
-        fontSize: 16,
+    editLink: {
+        fontSize: 14,
         fontFamily: 'Outfit_500Medium',
         color: '#FFB347',
     },
-    shieldControlRow: {
-        marginTop: 12,
+    emptyStateCard: {
+        padding: 32,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderStyle: 'dashed',
+        gap: 12,
     },
-    shieldButton: {
+    emptyStateText: {
+        color: '#64748B',
+        fontFamily: 'Outfit_500Medium',
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    gridItem: {
+        width: (width - 48 - 24) / 3,
+        aspectRatio: 1,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        gap: 8,
+    },
+    gridItemLocked: {
+        backgroundColor: 'rgba(0,0,0,0.2)',
+    },
+    gridIcon: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    grayscale: {
+        opacity: 0.5,
+    },
+    gridName: {
+        fontSize: 12,
+        fontFamily: 'Outfit_500Medium',
+        color: '#FFF',
+        textAlign: 'center',
+    },
+    bottomControls: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        padding: 24,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+    },
+    breakProtocolButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: 'rgba(255, 107, 107, 0.1)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 107, 107, 0.3)',
-        borderRadius: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
+        padding: 12,
     },
-    shieldButtonActive: {
-        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-        borderColor: 'rgba(76, 175, 80, 0.3)',
-    },
-    shieldButtonText: {
+    breakProtocolText: {
         fontSize: 14,
         fontFamily: 'Outfit_600SemiBold',
-    },
-    reminderCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        backgroundColor: 'rgba(255, 179, 71, 0.1)',
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 179, 71, 0.2)',
-    },
-    reminderText: {
-        flex: 1,
-        fontSize: 13,
-        fontFamily: 'Outfit_500Medium',
-        color: '#FFFFFF',
-        lineHeight: 18,
+        color: '#FF6B6B',
     },
     instructionsOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(26, 26, 46, 0.95)',
+        backgroundColor: 'rgba(0,0,0,0.9)',
         justifyContent: 'center',
-        alignItems: 'center',
         padding: 24,
     },
     instructionsCard: {
-        width: '100%',
         backgroundColor: '#1E293B',
         borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        padding: 32,
         alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        padding: 8,
     },
     instructionIconCircle: {
         width: 64,
@@ -624,55 +482,31 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 179, 71, 0.3)',
     },
     instructionTitle: {
-        fontSize: 22,
-        fontFamily: 'Outfit_600SemiBold',
+        fontSize: 20,
+        fontFamily: 'Outfit_700Bold',
         color: '#FFF',
-        marginBottom: 12,
-        textAlign: 'center',
+        marginBottom: 8,
     },
     instructionText: {
-        fontSize: 16,
-        fontFamily: 'Outfit_400Regular',
         color: '#94A3B8',
         textAlign: 'center',
-        lineHeight: 24,
-        marginBottom: 32,
-    },
-    instructionStep: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        marginBottom: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-        padding: 16,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-    },
-    instructionStepText: {
-        flex: 1,
-        fontSize: 15,
-        fontFamily: 'Outfit_500Medium',
-        color: '#E2E8F0',
-        marginLeft: 12,
+        marginBottom: 24,
+        lineHeight: 22,
     },
     instructionButton: {
         width: '100%',
-        marginTop: 16,
+        borderRadius: 16,
+        overflow: 'hidden',
     },
     instructionButtonGradient: {
-        paddingVertical: 16,
-        borderRadius: 16,
+        padding: 16,
         alignItems: 'center',
-        justifyContent: 'center',
     },
     instructionButtonText: {
-        fontSize: 16,
-        fontFamily: 'Outfit_600SemiBold',
         color: '#1A1A2E',
+        fontFamily: 'Outfit_600SemiBold',
+        fontSize: 16,
     },
 });

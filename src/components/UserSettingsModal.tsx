@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions, Modal, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, LogOut, ChevronRight, Moon, Sun, Bell, Shield } from 'lucide-react-native';
+import { X, LogOut, ChevronRight, Moon, Sun, Bell, Shield, RotateCcw } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/lib/state/auth-store';
+import { useLumisStore } from '@/lib/state/lumis-store';
 import { formatFirstName } from '@/lib/utils/name-utils';
 
 const { width } = Dimensions.get('window');
@@ -124,6 +125,23 @@ export default function UserSettingsModal({ visible, onClose }: UserSettingsModa
                             showChevron={false}
                         />
                     </View>
+
+                    {/* DEV: Reset Onboarding */}
+                    {__DEV__ && (
+                        <View style={styles.menuGroup}>
+                            <MenuItem
+                                icon={RotateCcw}
+                                label="🔄 Reset Onboarding (DEV)"
+                                onPress={() => {
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                    useLumisStore.getState().setHasCompletedOnboarding(false);
+                                    onClose();
+                                    router.replace('/');
+                                }}
+                                showChevron={false}
+                            />
+                        </View>
+                    )}
 
                     <Text style={styles.versionText}>Lumis v1.0.0 (Build 42)</Text>
                 </View>
