@@ -89,7 +89,11 @@ export default function DashboardScreen() {
   // Animate layout changes when goal updates (e.g. weather clears)
   // Animate layout changes when goal updates (e.g. weather clears)
   useEffect(() => {
+    // Sync store with native module to ensure accurate "Shielded Apps" count
+    useLumisStore.getState().syncWithNativeBlockedApps();
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+    // ...
 
     // Haptic feedback and visual scale for goal change
     Haptics.selectionAsync();

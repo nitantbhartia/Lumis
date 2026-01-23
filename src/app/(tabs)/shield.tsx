@@ -39,9 +39,15 @@ export default function ShieldHub() {
                 const status = await getScreenTimePermissionStatus();
                 setHasPermission(status);
                 if (status) {
-                    setNativeAppCount(getSelectedAppCount());
+                    const count = getSelectedAppCount();
+                    setNativeAppCount(count);
                     setShieldStatus(isShieldActive());
-                    setNativeAppToggles(getAppToggles());
+
+                    const toggles = getAppToggles();
+                    setNativeAppToggles(toggles);
+
+                    // Sync to global store for dashboard consistency
+                    useLumisStore.getState().syncWithNativeBlockedApps();
                 }
             };
             checkStatus();
@@ -98,6 +104,8 @@ export default function ShieldHub() {
                     if (result.count === 0 && result.toggles.length > 0) {
                         setNativeAppCount(result.toggles.length);
                     }
+                    // Sync to global store immediately
+                    useLumisStore.getState().syncWithNativeBlockedApps();
                 }
             } catch (error: any) {
                 Alert.alert("Picker Error", error?.message);

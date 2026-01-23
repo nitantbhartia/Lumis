@@ -63,6 +63,7 @@ interface LumisState {
   blockedApps: BlockedApp[];
   setBlockedApps: (apps: BlockedApp[]) => void;
   toggleAppBlocked: (appId: string) => void;
+  syncWithNativeBlockedApps: () => Promise<void>;
 
   // Daily Goal
   dailyGoalMinutes: number;
@@ -220,23 +221,33 @@ export const useLumisStore = create<LumisState>()(
       setCalibration: (calibration) => set({ calibration }),
 
       // Blocked Apps
-      blockedApps: [
-        { id: 'instagram', name: 'Instagram', icon: 'instagram', isBlocked: false },
-        { id: 'tiktok', name: 'TikTok', icon: 'video', isBlocked: false },
-        { id: 'twitter', name: 'X / Twitter', icon: 'twitter', isBlocked: false },
-        { id: 'facebook', name: 'Facebook', icon: 'facebook', isBlocked: false },
-        { id: 'youtube', name: 'YouTube', icon: 'youtube', isBlocked: false },
-        { id: 'reddit', name: 'Reddit', icon: 'message-circle', isBlocked: false },
-        { id: 'snapchat', name: 'Snapchat', icon: 'ghost', isBlocked: false },
-        { id: 'netflix', name: 'Netflix', icon: 'film', isBlocked: false },
-      ],
+      blockedApps: [],
       setBlockedApps: (apps) => set({ blockedApps: apps }),
-      toggleAppBlocked: (appId) =>
-        set((state) => ({
-          blockedApps: state.blockedApps.map((app) =>
-            app.id === appId ? { ...app, isBlocked: !app.isBlocked } : app
-          ),
-        })),
+
+      // We no longer manually toggle generic apps. We sync with Native Picker.
+      // But we keep this for UI optimistic updates if needed, logic changed to support syncing.
+      toggleAppBlocked: (appId) => { },
+
+      syncWithNativeBlockedApps: async () => {
+        // Import dynamically to avoid web crashes
+        try {
+          const { getAppToggles } = require('@/lib/screen-time');
+          const toggles = getAppToggles ? getAppToggles() : [];
+          if (toggles && toggles.length > 0) {
+            const mappedApps = toggles.map((t: any) => ({
+              id: t.token || t.name,
+              name: t.name || "Unknown App",
+              icon: 'shield', // Generic/Native icon will be handled by UI
+              isBlocked: t.isEnabled,
+              token: t.token,
+              isCategory: t.isCategory
+            }));
+            set({ blockedApps: mappedApps });
+          }
+        } catch (e) {
+          console.log("Failed to sync blocked apps", e);
+        }
+      },
 
       // Daily Goal
       dailyGoalMinutes: 10,
