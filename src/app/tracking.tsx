@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions, Platform, Modal, ScrollView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -224,10 +224,15 @@ const ScienceTicker = () => {
 
 export default function TrackingScreen() {
   const router = useRouter();
+  const { initialGoal } = useLocalSearchParams(); // Ensure 'useLocalSearchParams' is imported
   const insets = useSafeAreaInsets();
 
   const todayProgress = useLumisStore((s) => s.todayProgress);
   const dailyGoalMinutes = useLumisStore((s) => s.dailyGoalMinutes);
+
+  // Use passed session goal or fallback to daily goal (which might be lower/unadjusted)
+  const effectiveGoal = initialGoal ? Number(initialGoal) : dailyGoalMinutes;
+
   const selectedActivity = useLumisStore((s) => s.selectedActivity);
   const updateTodayProgress = useLumisStore((s) => s.updateTodayProgress);
   const incrementStreak = useLumisStore((s) => s.incrementStreak);
@@ -246,14 +251,21 @@ export default function TrackingScreen() {
   const sessionMinutes = sessionSeconds / 60;
   const totalMinutes = accumulatedMinutesRef.current + sessionMinutes;
 
-  // Calculate remaining target
-  const remainingMinutes = Math.max(0, dailyGoalMinutes - totalMinutes);
+  // Calculate remaining target based on EFFECTIVE GOAL
+  // We want to count down the session goal, correcting for previously accumulated minutes if they count towards it?
+  // Actually, 'initialGoal' passed from dashboard implies the "Session Goal" including what's left? 
+  // No, dashboard logic is: currentSessionGoal = Duration Value (e.g. 22).
+  // Is this the TOTAL daily goal adjusted, or just what's needed for this session?
+  // Dashboard: uses `updatedDailyGoal`. So it is the NEW Daily Goal.
+  // So: remaining = effectiveGoal - totalMinutes.
+
+  const remainingMinutes = Math.max(0, effectiveGoal - totalMinutes);
   const remainingSeconds = Math.max(0, (remainingMinutes * 60));
 
-  const progress = Math.min(1, sessionMinutes / Math.max(1, dailyGoalMinutes - accumulatedMinutesRef.current));
-  const dailyProgress = Math.min(1, totalMinutes / dailyGoalMinutes);
+  const progress = Math.min(1, sessionMinutes / Math.max(1, effectiveGoal - accumulatedMinutesRef.current));
+  const dailyProgress = Math.min(1, totalMinutes / effectiveGoal);
 
-  const isGoalReached = totalMinutes >= dailyGoalMinutes;
+  const isGoalReached = totalMinutes >= effectiveGoal;
 
   useEffect(() => {
     setTrackingActive(true);

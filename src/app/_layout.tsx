@@ -91,7 +91,7 @@ function RootLayoutNav() {
         <Stack.Screen name="app-selection" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="compass-lux" />
-        <Stack.Screen name="tracking" />
+        <Stack.Screen name="tracking" options={{ animation: 'none' }} />
         <Stack.Screen name="victory" options={{ animation: 'fade' }} />
         <Stack.Screen name="activity-summary" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings" options={{ presentation: 'modal' }} />

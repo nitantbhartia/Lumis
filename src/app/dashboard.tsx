@@ -117,7 +117,10 @@ export default function DashboardScreen() {
 
   const handleStartTracking = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/tracking');
+    router.push({
+      pathname: '/tracking',
+      params: { initialGoal: currentSessionGoal }
+    });
   };
 
   const windowStatus = hoursSinceSunrise < 2 ? "OPTIMAL" : hoursSinceSunrise < 4 ? "GOOD" : "CLOSING";
