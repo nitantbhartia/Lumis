@@ -204,10 +204,10 @@ export default function ShieldHub() {
                     {Platform.OS === 'ios' && (
                         <View style={styles.sectionContainer}>
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Shielded Targets</Text>
+                                <Text style={styles.sectionTitle}>Shielded Apps</Text>
                                 <Pressable hitSlop={10} onPress={hasPermission ? handleChooseApps : handleRequestPermission}>
                                     <Text style={styles.editLink}>
-                                        {hasPermission ? "Edit Targets" : "Grant Permission"}
+                                        {hasPermission ? "Edit Apps" : "Grant Permission"}
                                     </Text>
                                 </Pressable>
                             </View>
@@ -265,7 +265,7 @@ export default function ShieldHub() {
                             {isLocked && (
                                 <Pressable style={styles.breakProtocolButton} onPress={handleBreakProtocol}>
                                     <AlertCircle size={14} color="#FF6B6B" />
-                                    <Text style={styles.breakProtocolText}>Emergency Break Protocol</Text>
+                                    <Text style={styles.breakProtocolText}>Unlock Sooner</Text>
                                 </Pressable>
                             )}
 
@@ -310,8 +310,8 @@ export default function ShieldHub() {
                         <View style={styles.instructionIconCircle}>
                             <Target size={32} color="#FFB347" />
                         </View>
-                        <Text style={styles.instructionTitle}>Select Targets</Text>
-                        <Text style={styles.instructionText}>Identify the biological disruptors (Social, Games) you want to shield.</Text>
+                        <Text style={styles.instructionTitle}>Select Apps</Text>
+                        <Text style={styles.instructionText}>Choose which apps to block until you've met your light goal.</Text>
                         <Pressable style={styles.instructionButton} onPress={openNativePicker}>
                             <LinearGradient colors={['#FFB347', '#FF8C00']} style={styles.instructionButtonGradient}>
                                 <Text style={styles.instructionButtonText}>Open System Picker</Text>
