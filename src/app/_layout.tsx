@@ -100,6 +100,7 @@ function RootLayoutNav() {
         <Stack.Screen name="leaderboard" options={{ presentation: 'modal' }} />
         <Stack.Screen name="friends" options={{ presentation: 'modal' }} />
         <Stack.Screen name="insights" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="landing" options={{ animation: 'fade' }} />
       </Stack>
     </ThemeProvider>
   );
