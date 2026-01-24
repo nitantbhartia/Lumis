@@ -40,7 +40,7 @@ export default function OnboardingQuestionSunlightScreen() {
         if (isNavigating) return;
         setIsNavigating(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding-profile-complete');
+        router.push('/onboarding-screen-before-bed');
     };
 
 

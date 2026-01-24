@@ -8,7 +8,7 @@ import { useAuthStore } from '@/lib/state/auth-store';
 import * as Haptics from 'expo-haptics';
 import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp, LumisIcon, clearMetadata } from '@/lib/screen-time';
 import { useFocusEffect } from 'expo-router';
-import { CoolDownModal } from '@/components/CoolDownModal';
+import { HighFrictionUnlockModal } from '@/components/shield/HighFrictionUnlockModal';
 import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 import { ShieldPreviewRow } from '@/components/ShieldPreviewRow';
 import { BlurView } from 'expo-blur';
@@ -146,7 +146,8 @@ export default function ShieldHub() {
         setShowBreakModal(false);
         deactivateShield();
         setShieldStatus(false);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Note: performEmergencyUnlock is called inside HighFrictionUnlockModal
+        // which handles streak reset and tracking
     };
 
     return (
@@ -286,9 +287,11 @@ export default function ShieldHub() {
 
             </LinearGradient>
 
-            <CoolDownModal
+            <HighFrictionUnlockModal
                 visible={showBreakModal}
-                onComplete={executeBreak}
+                onClose={() => setShowBreakModal(false)}
+                onUnlock={executeBreak}
+                currentStreak={currentStreak}
             />
 
             {/* Instruction Overlay reused logic */}

@@ -66,10 +66,6 @@ export default function OnboardingSuccessScreen() {
   const buttonOpacity = useSharedValue(0);
   const buttonScale = useSharedValue(1);
 
-  const isPremium = useLumisStore((s) => s.isPremium);
-  const isTrialActive = useLumisStore((s) => s.isTrialActive());
-  const hasPremiumAccess = isPremium || isTrialActive;
-
   // Get shielded apps
   const activeApps = useMemo(() => blockedApps.filter(a => a.isBlocked), [blockedApps]);
   const activeAppsCount = activeApps.length;
@@ -131,13 +127,8 @@ export default function OnboardingSuccessScreen() {
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setHasCompletedOnboarding(true);
-
-    // Redirect to Paywall if not premium
-    if (!hasPremiumAccess) {
-      router.replace('/(tabs)/premium');
-    } else {
-      router.replace('/(tabs)');
-    }
+    // Go directly to dashboard after completing onboarding
+    router.replace('/(tabs)');
   };
 
   useEffect(() => {

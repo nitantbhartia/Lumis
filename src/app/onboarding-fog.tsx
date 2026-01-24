@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, ArrowRight, Info, Brain } from 'lucide-react-native';
+import { useLumisStore } from '@/lib/state/lumis-store';
 
 const OPTIONS = [
     { id: 'yes', label: 'Yes' },
@@ -19,9 +20,12 @@ export default function OnboardingFogScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const [selected, setSelected] = useState<FogOption | null>(null);
+    const setBrainFogFrequency = useLumisStore((s) => s.setBrainFogFrequency);
+
     const handleSelect = (id: FogOption) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setSelected(id);
+        setBrainFogFrequency(id);
         // Auto-navigate after selection for smoother flow
         setTimeout(() => {
             handleNext();

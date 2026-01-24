@@ -147,6 +147,14 @@ interface LumisState {
   // New Onboarding Data
   sunlightFrequency: 'daily' | 'few_times' | 'once_a_week' | 'rarely' | null;
   setSunlightFrequency: (value: 'daily' | 'few_times' | 'once_a_week' | 'rarely') => void;
+  phoneReachTiming: 'immediately' | 'in_bed' | 'coffee' | 'out_door' | null;
+  setPhoneReachTiming: (value: 'immediately' | 'in_bed' | 'coffee' | 'out_door') => void;
+  brainFogFrequency: 'yes' | 'no' | 'most' | null;
+  setBrainFogFrequency: (value: 'yes' | 'no' | 'most') => void;
+  screenBeforeBed: 'always' | 'often' | 'sometimes' | 'rarely' | null;
+  setScreenBeforeBed: (value: 'always' | 'often' | 'sometimes' | 'rarely') => void;
+  morningEnergyLevel: 'exhausted' | 'sluggish' | 'okay' | 'energized' | null;
+  setMorningEnergyLevel: (value: 'exhausted' | 'sluggish' | 'okay' | 'energized') => void;
 
   // Preferences
   skinType: 1 | 2 | 3 | 4 | 5 | 6; // Fitzpatrick Scale
@@ -184,6 +192,14 @@ interface LumisState {
   setScheduledWakeTime: (time: string | null) => void;
   isShieldScheduled: boolean;
   setIsShieldScheduled: (value: boolean) => void;
+
+  // Monthly Emergency Unlock Limits
+  monthlyFreeUnlocksUsed: number;
+  lastUnlockResetMonth: string; // "2026-01" format
+  freeUnlocksPerMonth: number; // Default: 3
+  useMonthlyFreeUnlock: () => boolean; // Returns true if unlock was available
+  getRemainingFreeUnlocks: () => number;
+  performEmergencyUnlock: () => void; // Full unlock flow with all consequences
 }
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -551,6 +567,14 @@ export const useLumisStore = create<LumisState>()(
       // New Onboarding Data
       sunlightFrequency: null,
       setSunlightFrequency: (value) => set({ sunlightFrequency: value }),
+      phoneReachTiming: null,
+      setPhoneReachTiming: (value) => set({ phoneReachTiming: value }),
+      brainFogFrequency: null,
+      setBrainFogFrequency: (value) => set({ brainFogFrequency: value }),
+      screenBeforeBed: null,
+      setScreenBeforeBed: (value) => set({ screenBeforeBed: value }),
+      morningEnergyLevel: null,
+      setMorningEnergyLevel: (value) => set({ morningEnergyLevel: value }),
 
       // Preferences
       skinType: 2,
@@ -621,6 +645,59 @@ export const useLumisStore = create<LumisState>()(
       setScheduledWakeTime: (time) => set({ scheduledWakeTime: time }),
       isShieldScheduled: false,
       setIsShieldScheduled: (value) => set({ isShieldScheduled: value }),
+
+      // Monthly Emergency Unlock Limits
+      monthlyFreeUnlocksUsed: 0,
+      lastUnlockResetMonth: new Date().toISOString().slice(0, 7), // "2026-01"
+      freeUnlocksPerMonth: 3,
+
+      useMonthlyFreeUnlock: () => {
+        const state = get();
+        const currentMonth = new Date().toISOString().slice(0, 7);
+
+        // Reset counter if new month
+        if (state.lastUnlockResetMonth !== currentMonth) {
+          set({
+            monthlyFreeUnlocksUsed: 0,
+            lastUnlockResetMonth: currentMonth,
+          });
+        }
+
+        // Check if free unlocks available
+        const updatedState = get();
+        if (updatedState.monthlyFreeUnlocksUsed < updatedState.freeUnlocksPerMonth) {
+          set({ monthlyFreeUnlocksUsed: updatedState.monthlyFreeUnlocksUsed + 1 });
+          return true;
+        }
+        return false;
+      },
+
+      getRemainingFreeUnlocks: () => {
+        const state = get();
+        const currentMonth = new Date().toISOString().slice(0, 7);
+
+        // If new month, return full amount
+        if (state.lastUnlockResetMonth !== currentMonth) {
+          return state.freeUnlocksPerMonth;
+        }
+
+        return Math.max(0, state.freeUnlocksPerMonth - state.monthlyFreeUnlocksUsed);
+      },
+
+      performEmergencyUnlock: () => {
+        const state = get();
+
+        // Reset streak (ALWAYS - maximum consequence)
+        if (state.currentStreak > 0) {
+          set({ hasHadStreakBefore: true, currentStreak: 0 });
+        }
+
+        // Reset days without emergency unlock
+        set({
+          daysWithoutEmergencyUnlock: 0,
+          emergencyUnlockUsedToday: true,
+        });
+      },
     }),
     {
       name: 'lumis-storage',
@@ -656,6 +733,13 @@ export const useLumisStore = create<LumisState>()(
         hasSeenLuxPrimer: state.hasSeenLuxPrimer,
         passiveVerificationSuccessCount: state.passiveVerificationSuccessCount,
         passiveVerificationFailCount: state.passiveVerificationFailCount,
+        monthlyFreeUnlocksUsed: state.monthlyFreeUnlocksUsed,
+        lastUnlockResetMonth: state.lastUnlockResetMonth,
+        sunlightFrequency: state.sunlightFrequency,
+        phoneReachTiming: state.phoneReachTiming,
+        brainFogFrequency: state.brainFogFrequency,
+        screenBeforeBed: state.screenBeforeBed,
+        morningEnergyLevel: state.morningEnergyLevel,
       }),
     }
   )

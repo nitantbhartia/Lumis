@@ -62,7 +62,7 @@ export function useMissionBriefing(
         // "If Lux is < 5,000 (implied by cloudy), set TargetDuration to 22."
         return {
             title: "Cloudy Anchor Protocol",
-            message: `Heavy overcast detected. We’ve adjusted your goal to 22 minutes to ensure your clock stays anchored.`,
+            message: `Overcast skies detected. Extended goal to keep your circadian clock anchored.`,
             luxScore: "~2,500 Lux",
             duration: "20-25 min",
             durationValue: 22,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Modal, Switch } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, Modal, Switch, TextInput, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, LogOut, ChevronRight, Moon, Sun, Bell, Shield, RotateCcw } from 'lucide-react-native';
+import { X, LogOut, ChevronRight, Moon, Sun, Bell, Shield, RotateCcw, User, Pencil } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/lib/state/auth-store';
@@ -20,9 +20,25 @@ export default function UserSettingsModal({ visible, onClose }: UserSettingsModa
     const router = useRouter();
     const logout = useAuthStore((s) => s.logout);
     const userName = useAuthStore((s) => s.userName);
+    const setUserName = useAuthStore((s) => s.setUserName);
+    const user = useAuthStore((s) => s.user);
+
+    // Get display name from userName or user.name
+    const displayName = formatFirstName(userName) || formatFirstName(user?.name) || 'Friend';
+    const initials = displayName.charAt(0).toUpperCase();
 
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [tempName, setTempName] = useState(userName || '');
+
+    const handleSaveName = () => {
+        if (tempName.trim()) {
+            setUserName(tempName.trim());
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        setIsEditingName(false);
+    };
 
     const handleLogout = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -86,10 +102,36 @@ export default function UserSettingsModal({ visible, onClose }: UserSettingsModa
                     <View style={styles.profileSection}>
                         <View style={styles.avatarLarge}>
                             <Text style={styles.avatarTextLarge}>
-                                {formatFirstName(userName || 'Explorer').charAt(0).toUpperCase()}
+                                {initials}
                             </Text>
                         </View>
-                        <Text style={styles.profileName}>{formatFirstName(userName || 'Explorer')}</Text>
+                        {isEditingName ? (
+                            <View style={styles.nameEditContainer}>
+                                <TextInput
+                                    style={styles.nameInput}
+                                    value={tempName}
+                                    onChangeText={setTempName}
+                                    placeholder="Enter your name"
+                                    autoFocus
+                                    onSubmitEditing={handleSaveName}
+                                    returnKeyType="done"
+                                />
+                                <Pressable onPress={handleSaveName} style={styles.saveButton}>
+                                    <Text style={styles.saveButtonText}>Save</Text>
+                                </Pressable>
+                            </View>
+                        ) : (
+                            <Pressable
+                                onPress={() => {
+                                    setTempName(userName || '');
+                                    setIsEditingName(true);
+                                }}
+                                style={styles.nameRow}
+                            >
+                                <Text style={styles.profileName}>{displayName}</Text>
+                                <Pencil size={14} color="#999" />
+                            </Pressable>
+                        )}
                         <Text style={styles.profileMeta}>Basic Plan</Text>
                     </View>
 
@@ -215,7 +257,41 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontFamily: 'Outfit_600SemiBold',
         color: '#1A1A2E',
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
         marginBottom: 4,
+    },
+    nameEditContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    nameInput: {
+        fontSize: 18,
+        fontFamily: 'Outfit_500Medium',
+        color: '#1A1A2E',
+        backgroundColor: '#FFF',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        minWidth: 150,
+    },
+    saveButton: {
+        backgroundColor: '#FF8C00',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    saveButtonText: {
+        fontSize: 14,
+        fontFamily: 'Outfit_600SemiBold',
+        color: '#FFF',
     },
     profileMeta: {
         fontSize: 14,

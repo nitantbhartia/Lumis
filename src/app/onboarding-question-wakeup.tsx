@@ -13,13 +13,14 @@ export default function OnboardingQuestionWakeupScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const [wakeTime, setWakeTime] = useState(new Date(new Date().setHours(7, 0, 0, 0)));
-
-    // We could store this in the store if needed
-    // const setWakeTimeStore = useLumisStore((s) => s.setWakeTime); 
+    const setScheduledWakeTime = useLumisStore((s) => s.setScheduledWakeTime);
 
     const handleNext = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        // Save wake time to store here if implemented
+        // Save wake time as "HH:MM" format
+        const hours = wakeTime.getHours().toString().padStart(2, '0');
+        const mins = wakeTime.getMinutes().toString().padStart(2, '0');
+        setScheduledWakeTime(`${hours}:${mins}`);
         router.push('/onboarding-question-sunlight');
     };
 

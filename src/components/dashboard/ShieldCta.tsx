@@ -124,8 +124,7 @@ export const ShieldCta = ({
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        gap: 12, // Reduced from 16
-        marginBottom: 16, // Reduced from 32 (padding handled by safe area or parent list)
+        gap: 12,
     },
     // Stack Styles
     stackContainer: {

@@ -5,37 +5,32 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 
 const OPTIONS = [
-    { id: 'immediately', label: 'Immediately (within 5 mins)' },
-    { id: 'in_bed', label: "While I'm still in bed" },
-    { id: 'coffee', label: 'After my first coffee' },
-    { id: 'out_door', label: "Once I'm out the door" },
+    { id: 'always', label: 'Always - right until I sleep' },
+    { id: 'often', label: 'Often - most nights' },
+    { id: 'sometimes', label: 'Sometimes - a few nights a week' },
+    { id: 'rarely', label: 'Rarely - I avoid screens before bed' },
 ] as const;
 
-type TrapOption = typeof OPTIONS[number]['id'];
+type ScreenOption = typeof OPTIONS[number]['id'];
 
-export default function OnboardingTrapScreen() {
+export default function OnboardingScreenBeforeBedScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const [selected, setSelected] = useState<TrapOption | null>(null);
-    const setPhoneReachTiming = useLumisStore((s) => s.setPhoneReachTiming);
+    const [selected, setSelected] = useState<ScreenOption | null>(null);
+    const setScreenBeforeBed = useLumisStore((s) => s.setScreenBeforeBed);
 
-    const handleSelect = (id: TrapOption) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setSelected(id);
-        setPhoneReachTiming(id);
-        // Auto-navigate after selection for smoother flow
-        setTimeout(() => {
-            handleNext();
-        }, 400);
-    };
-
-    const handleNext = () => {
+    const handleSelect = (id: ScreenOption) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push('/onboarding-fog');
+        setSelected(id);
+        setScreenBeforeBed(id);
+        // Auto-navigate after selection
+        setTimeout(() => {
+            router.push('/onboarding-morning-energy');
+        }, 400);
     };
 
     const handleBack = () => {
@@ -61,7 +56,7 @@ export default function OnboardingTrapScreen() {
                     {/* Progress Indicator */}
                     <View style={styles.progressContainer}>
                         <View style={styles.progressBar}>
-                            <View style={[styles.progressFill, { width: '20%' }]} />
+                            <View style={[styles.progressFill, { width: '70%' }]} />
                         </View>
                         <Text style={styles.progressLabel}>BUILDING YOUR CIRCADIAN PROFILE</Text>
                     </View>
@@ -74,7 +69,7 @@ export default function OnboardingTrapScreen() {
                     {/* Question */}
                     <View style={styles.questionContainer}>
                         <Text style={styles.questionText}>
-                            How soon do you reach for your phone after waking up?
+                            Do you use screens{'\n'}before bed?
                         </Text>
                     </View>
 
@@ -107,27 +102,6 @@ export default function OnboardingTrapScreen() {
 
                     {/* Spacer */}
                     <View style={{ flex: 1 }} />
-
-                    {/* Next Button */}
-                    <Pressable
-                        onPress={handleNext}
-                        disabled={!selected}
-                        style={({ pressed }) => [
-                            styles.nextButtonOuter,
-                            pressed && styles.ctaPressed,
-                            !selected && { opacity: 0.5 }
-                        ]}
-                    >
-                        <LinearGradient
-                            colors={selected ? ['#FFB347', '#FF8C00'] : ['#D0D0D0', '#C0C0C0']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.nextButton}
-                        >
-                            <Text style={styles.nextButtonText}>Next</Text>
-                            <ArrowRight size={22} color={selected ? '#1A1A2E' : '#888'} strokeWidth={3} />
-                        </LinearGradient>
-                    </Pressable>
                 </View>
             </LinearGradient>
         </View>
@@ -203,33 +177,5 @@ const styles = StyleSheet.create({
     },
     optionTextSelected: {
         color: '#FFFFFF',
-    },
-    nextButtonOuter: {
-        width: '100%',
-        height: 80,
-        borderRadius: 32,
-        shadowColor: '#FF8C00',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 12,
-    },
-    ctaPressed: {
-        transform: [{ scale: 0.95 }],
-    },
-    nextButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 32,
-        gap: 8,
-    },
-    nextButtonText: {
-        fontSize: 22,
-        fontFamily: 'Outfit_800ExtraBold',
-        color: '#1A1A2E',
-        textTransform: 'uppercase',
-        letterSpacing: 2,
     },
 });

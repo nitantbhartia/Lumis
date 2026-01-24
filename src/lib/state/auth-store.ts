@@ -193,19 +193,25 @@ export const useAuthStore = create<AuthState>()(
           if (USE_MOCK_API) {
             await delay(1000);
 
-            const finalName = data.name || get().userName || 'Explorer';
+            // Use provided name, existing userName, or existing user name (don't use 'Explorer' fallback)
+            const finalName = data.name || get().userName || get().user?.name || null;
             const user: User = {
-              id: 'user_' + Math.random().toString(36).substr(2, 9),
-              email: data.email ?? `${data.provider}user@example.com`,
-              name: finalName,
-              avatarUrl: data.avatarUrl ?? undefined,
-              createdAt: new Date().toISOString(),
-              isPremium: false,
+              id: get().user?.id || 'user_' + Math.random().toString(36).substr(2, 9),
+              email: data.email ?? get().user?.email ?? `${data.provider}user@example.com`,
+              name: finalName ?? undefined,
+              avatarUrl: data.avatarUrl ?? get().user?.avatarUrl ?? undefined,
+              createdAt: get().user?.createdAt || new Date().toISOString(),
+              isPremium: get().user?.isPremium || false,
             };
 
-            set({ user, isAuthenticated: true, isLoading: false, userName: finalName });
+            // Only update userName if we have a valid name
+            const updates: Partial<AuthState> = { user, isAuthenticated: true, isLoading: false };
+            if (finalName) {
+              updates.userName = finalName;
+            }
+            set(updates as any);
             // Simulate new user for onboarding flow
-            return { success: true, isNewUser: true };
+            return { success: true, isNewUser: !get().user };
           }
 
           // Real API call - send social auth data to backend
