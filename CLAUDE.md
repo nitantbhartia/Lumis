@@ -5,6 +5,7 @@
 - **Scope Control**: Read ≤3 files unless requested
 - **No Verbosity**: Concise explanations only
 - **Session**: Suggest `/clear` when task complete
+- **Ignore**: Never read node_modules/, .expo/, .git/, ios/, android/, dist/, build/
 
 ## Stack
 Expo SDK 53 + RN 0.76.7, bun, NativeWind v4, Tailwind v3, Reanimated v3, Zustand, React Query, Expo Router, zeego, lucide-react-native
@@ -25,6 +26,9 @@ Expo SDK 53 + RN 0.76.7, bun, NativeWind v4, Tailwind v3, Reanimated v3, Zustand
 
 ## Forbidden Files
 Do not edit: patches/, babel.config.js, metro.config.js, app.json, tsconfig.json, nativewind-env.d.ts
+
+## Files to Ignore
+Never read/search: node_modules/, .expo/, .git/, ios/, android/, dist/, build/, .next/
 
 ## Common Mistakes
 - Horizontal ScrollViews need `style={{ flexGrow: 0 }}`
