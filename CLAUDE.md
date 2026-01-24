@@ -1,181 +1,62 @@
-<stack>
-  Expo SDK 53, React Native 0.76.7, bun (not npm).
-  React Query for server/async state.
-  NativeWind + Tailwind v3 for styling.
-  react-native-reanimated v3 for animations (preferred over Animated from react-native).
-  react-native-gesture-handler for gestures.
-  lucide-react-native for icons.
-  All packages are pre-installed. DO NOT install new packages unless they are @expo-google-font packages or pure JavaScript helpers like lodash, dayjs, etc.
-</stack>
+# Claude Code Project Memory
 
-<structure>
-  src/app/          — Expo Router file-based routes (src/app/_layout.tsx is root). Add new screens to this folder.
-  src/components/   — Reusable UI components. Add new components to this folder.
-  src/lib/          — Utilities: cn.ts (className merge), example-context.ts (state pattern)
-</structure>
+## Critical Constraints (Token Efficiency)
+- **Think First**: Propose plan in Plan Mode before code changes
+- **Scope Control**: Read ≤3 files unless requested
+- **No Verbosity**: Concise explanations only
+- **Session**: Suggest `/clear` when task complete
 
-<typescript>
-  Explicit type annotations for useState: `useState<Type[]>([])` not `useState([])`
-  Null/undefined handling: use optional chaining `?.` and nullish coalescing `??`
-  Include ALL required properties when creating objects — TypeScript strict mode is enabled.
-</typescript>
+## Stack
+Expo SDK 53 + RN 0.76.7, bun, NativeWind v4, Tailwind v3, Reanimated v3, Zustand, React Query, Expo Router, zeego, lucide-react-native
 
-<environment>
-  You are in Vibecode. The system manages git and the dev server (port 8081).
-  DO NOT: manage git, touch the dev server, or check its state.
-  The user views the app through Vibecode App.
-  The user cannot see the code or interact with the terminal. Do not tell the user to do anything with the code or terminal.
-  You can see logs in the expo.log file.
-  The Vibecode App has tabs like ENV tab, API tab, LOGS tab. You can ask the user to use these tabs to view the logs, add enviroment variables, or give instructions for APIs like OpenAI, Nanobanana, Grok, Elevenlabs, etc. but first try to implement the functionality yourself.
-  The user is likely non-technical, communicate with them in an easy to understand manner.
-  If the user's request is vague or ambitious, scope down to specific functionality. Do everything for them.
-  For images, use URLs from unsplash.com. You can also tell the user they can use the IMAGES tab to generate and uplooad images.
-</environment>
+## Structure
+- `src/app/` - Expo Router routes, (tabs)/ for tab navigation
+- `src/components/` - Reusable UI
+- `src/lib/state/` - Zustand stores (lumis-store, auth-store, social-store)
+- `src/lib/` - utils: cn.ts, sensors.ts, screen-time.ts, notifications.ts
 
+## Coding Standards
+**TypeScript**: Strict mode. Explicit types: `useState<Type[]>([])`, optional chaining `?.`, nullish `??`
+**State**: React Query for async, Zustand for local. Use selectors: `useStore(s => s.foo)`. Persist via AsyncStorage sparingly
+**Styling**: NativeWind + cn() helper. CameraView/LinearGradient/Animated = style prop only (no className)
+**Components**: Pressable > TouchableOpacity. Custom modals > Alert.alert()
+**SafeArea**: Import from react-native-safe-area-context. Skip in tab stacks with headers
+**Routing**: Expo Router file-based. ONE "/" route. Dynamic: `useLocalSearchParams()`. Modals: `presentation: "modal"`
 
-<forbidden_files>
-  Do not edit: patches/, babel.config.js, metro.config.js, app.json, tsconfig.json, nativewind-env.d.ts
-</forbidden_files>
+## Forbidden Files
+Do not edit: patches/, babel.config.js, metro.config.js, app.json, tsconfig.json, nativewind-env.d.ts
 
-<routing>
-  Expo Router for file-based routing. Every file in src/app/ becomes a route.
-  Never delete or refactor RootLayoutNav from src/app/_layout.tsx.
-  
-  <stack_router>
-    src/app/_layout.tsx (root layout), src/app/index.tsx (matches '/'), src/app/settings.tsx (matches '/settings')
-    Use <Stack.Screen options={{ title, headerStyle, ... }} /> inside pages to customize headers.
-  </stack_router>
-  
-  <tabs_router>
-    Only files registered in src/app/(tabs)/_layout.tsx become actual tabs.
-    Unregistered files in (tabs)/ are routes within tabs, not separate tabs.
-    Nested stacks create double headers — remove header from tabs, add stack inside each tab.
-    At least 2 tabs or don't use tabs at all — single tab looks bad.
-  </tabs_router>
-  
-  <router_selection>
-    Games should avoid tabs — use full-screen stacks instead.
-    For full-screen overlays/modals outside tabs: create route in src/app/ (not src/app/(tabs)/), 
-    then add `<Stack.Screen name="page" options={{ presentation: "modal" }} />` in src/app/_layout.tsx.
-  </router_selection>
-  
-  <rules>
-    Only ONE route can map to "/" — can't have both src/app/index.tsx and src/app/(tabs)/index.tsx.
-    Dynamic params: use `const { id } = useLocalSearchParams()` from expo-router.
-  </rules>
-</routing>
+## Common Mistakes
+- Horizontal ScrollViews need `style={{ flexGrow: 0 }}`
+- CameraView from expo-camera (not deprecated Camera)
+- No Node.js buffer in RN
+- reanimated/gesture-handler docs may be outdated - check current
+- react-native-keyboard-controller for keyboard handling
 
-<state>
-  React Query for server/async state. Always use object API: `useQuery({ queryKey, queryFn })`.
-  Never wrap RootLayoutNav directly.
-  React Query provider must be outermost; nest other providers inside it.
-  
-  Use `useMutation` for async operations — no manual `setIsLoading` patterns.
-  Wrap third-party lib calls (RevenueCat, etc.) in useQuery/useMutation for consistent loading states.
-  Reuse query keys across components to share cached data — don't create duplicate providers.
-  
-  For local state, use Zustand. However, most state is server state, so use React Query for that.
-  Always use a selector with Zustand to subscribe only to the specific slice of state you need (e.g., useStore(s => s.foo)) rather than the whole store to prevent unnecessary re-renders. Make sure that the value returned by the selector is a primitive. Do not execute store methods in selectors; select data/functions, then compute outside the selector.
-  For persistence: use AsyncStorage inside context hook providers. Only persist necessary data.
-  Split ephemeral from persisted state to avoid hydration bugs.
-</state>
+## Development Environment
+- Standard Expo development workflow (npx expo)
+- User works in IDE with full code/terminal access
+- Git/deployment managed by user
+- Logs via Metro bundler and console
 
-<safearea>
-  Import from react-native-safe-area-context, NOT from react-native.
-  Skip SafeAreaView inside tab stacks with navigation headers.
-  Skip when using native headers from Stack/Tab navigator.
-  Add when using custom/hidden headers.
-  For games: use useSafeAreaInsets hook instead.
-</safearea>
+## Lumis App Context
+**Purpose**: Gamified daylight exposure rewards screen time unlock
+**Auth**: Passwordless (Apple/Google/Email OTP), biometric auto-login
+**Key Screens**: Onboarding → Dashboard → Tracking (light sensor) → Shield (app blocking) → Analytics → Achievements → Premium
+**Stores**: lumis-store (progress, calibration, streaks), auth-store (user, tokens), social-store
+**Sensors**: expo-lux-sensor, expo-sensors, expo-camera
+**Native Module**: lumisscreentime (custom, in /modules/)
+**Design**: Warm sunrise palette (dawn → sunset), Outfit + Syne fonts, iOS-inspired
 
-<data>
-  Create realistic mock data when you lack access to real data.
-  For image analysis: actually send to LLM don't mock.
-</data>
+## Reference Commands
+- Dev: `npx expo start` (or `bun run ios` / `bun run android`)
+- Install: `bun add <package>` (using bun, not npm)
+- Fonts: `bun add @expo-google-fonts/{font-name}`
+- Build: `npx expo prebuild` → native build
+- TypeCheck: `npx tsc --noEmit`
+- Avoid new packages except @expo-google-fonts or pure JS utils
 
-<design>
-  Don't hold back. This is mobile — design for touch, thumb zones, glanceability.
-  Inspiration: iOS, Instagram, Airbnb, Coinbase, polished habit trackers.
-
-  <avoid>
-    Purple gradients on white, generic centered layouts, predictable patterns.
-    Web-like designs on mobile. Overused fonts (Space Grotesk, Inter).
-  </avoid>
-
-  <do>
-    Cohesive themes with dominant colors and sharp accents.
-    High-impact animations: progress bars, button feedback, haptics.
-    Depth via gradients and patterns, not flat solids.
-    Install `@expo-google-fonts/{font-name}` for fonts (eg: `@expo-google-fonts/inter`)
-    Use zeego for context menus and dropdowns (native feel). Lookup the documentation on zeego.dev to see how to use it.
-  </do>
-</design>
-
-<mistakes>
-  <styling>
-    Use Nativewind for styling. Use cn() helper from src/lib/cn.ts to merge classNames when conditionally applying classNames or passing classNames via props.
-    CameraView, LinearGradient, and Animated components DO NOT support className. Use inline style prop.
-    Horizontal ScrollViews will expand vertically to fill flex containers. Add `style={{ flexGrow: 0 }}` to constrain height to content.
-  </styling>
-
-  <camera>
-    Use CameraView from expo-camera, NOT the deprecated Camera import.
-    import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-    Use style={{ flex: 1 }}, not className.
-    Overlay UI must be absolute positioned inside CameraView.
-  </camera>
-
-  <react_native>
-    No Node.js buffer in React Native — don't import from 'buffer'.
-  </react_native>
-
-  <ux>
-    Use Pressable over TouchableOpacity.
-    Use custom modals, not Alert.alert().
-    Ensure keyboard is dismissable and doesn't obscure inputs. This is much harder to implement than it seems. You can use the react-native-keyboard-controller package to help with this. But, make sure to look up the documentation before implementing.
-  </ux>
-
-  <outdated_knowledge>
-    Your react-native-reanimated and react-native-gesture-handler training may be outdated. Look up current docs before implementing.
-  </outdated_knowledge>
-</mistakes>
-
-<appstore>
-  Cannot assist with App Store or Google Play submission processes (app.json, eas.json, EAS CLI commands).
-  For submission help, click "Share" on the top right corner on the Vibecode App and select "Submit to App Store".
-</appstore> 
-
-<skills>
-You have access to a few skills in the `.claude/skills` folder. Use them to your advantage.
-- ai-apis-like-chatgpt: Use this skill when the user asks you to make an app that requires an AI API.
-- expo-docs: Use this skill when the user asks you to use an Expo SDK module or package that you might not know much about.
-- frontend-app-design: Use this skill when the user asks you to design a frontend app component or screen.
-</skills>
-
-<lumis_onboarding>
-  LUMIS PASSWORDLESS ONBOARDING (2026 Standard)
-
-  The modern login flow uses the "Aha! First" pattern to increase conversion 5x:
-  Users experience app value (sensor working) BEFORE signup.
-
-  Flow: Splash → Value Prop (3 slides) → Sensor Calibration (live test) → Auth (Apple/Google/Email) → Permissions → Success → Dashboard
-
-  Key Files:
-  - src/app/onboarding-splash.tsx - Pulsing sun, 3-second auto-transition
-  - src/app/onboarding-value-prop.tsx - 3-slide carousel with progress bars
-  - src/app/onboarding-calibration.tsx - Live light sensor test with animated bar
-  - src/app/onboarding-auth.tsx - Passwordless options (Apple/Google/Email OTP)
-  - src/app/onboarding-email-otp.tsx - 6-digit code with 60s resend timer
-  - src/app/onboarding-permissions.tsx - Big Three permissions with psychology pre-modals
-  - src/app/onboarding-success.tsx - Celebration with glowing sun + auto-navigate to dashboard
-
-  State Management (Zustand):
-  - onboardingStep: tracks current step in flow
-  - sensorCalibration: stores { light: number, timestamp: number }
-  - userName: stores name for personalization in success screen
-  - resetOnboarding(): clears all onboarding state
-
-  All onboarding state persists to AsyncStorage (survives app restart).
-
-  Returning users get biometric auto-login (background FaceID/TouchID) → Dashboard (no login screen).
-</lumis_onboarding>
+## Skills Available
+- ai-apis-like-chatgpt - AI API integration
+- expo-docs - Expo SDK modules
+- frontend-app-design - UI/UX design
