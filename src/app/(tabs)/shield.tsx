@@ -265,7 +265,7 @@ export default function ShieldHub() {
                             {isLocked && (
                                 <Pressable style={styles.breakProtocolButton} onPress={handleBreakProtocol}>
                                     <AlertCircle size={14} color="#FF6B6B" />
-                                    <Text style={styles.breakProtocolText}>Unlock Sooner</Text>
+                                    <Text style={styles.breakProtocolText}>I Need to Unlock Sooner</Text>
                                 </Pressable>
                             )}
 
