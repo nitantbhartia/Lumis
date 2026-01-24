@@ -2,6 +2,7 @@ import ExpoModulesCore
 import ManagedSettings
 import FamilyControls
 import UIKit
+import ActivityKit
 
 // NOTE: DO NOT IMPORT SwiftUI here. 
 // It conflicts with Expo's 'View' function name.
@@ -144,30 +145,85 @@ public class LumisScreenTimeModule: Module {
         }
 
         View(LumisIconView.self) {
-            Prop("tokenData") { (view: LumisIconView, data: String?) in 
-                view.lastProps.tokenData = data 
+            Prop("tokenData") { (view: LumisIconView, data: String?) in
+                view.lastProps.tokenData = data
                 view.updateFromProps()
             }
-            Prop("appName") { (view: LumisIconView, name: String?) in 
-                view.lastProps.appName = name 
+            Prop("appName") { (view: LumisIconView, name: String?) in
+                view.lastProps.appName = name
                 view.updateFromProps()
             }
-            Prop("isCategory") { (view: LumisIconView, isCat: Bool) in 
-                view.lastProps.isCategory = isCat 
+            Prop("isCategory") { (view: LumisIconView, isCat: Bool) in
+                view.lastProps.isCategory = isCat
                 view.updateFromProps()
             }
-            Prop("variant") { (view: LumisIconView, variant: String?) in 
-                view.lastProps.variant = variant ?? "icon" 
+            Prop("variant") { (view: LumisIconView, variant: String?) in
+                view.lastProps.variant = variant ?? "icon"
                 view.updateFromProps()
             }
-            Prop("size") { (view: LumisIconView, size: Double?) in 
-                view.lastProps.size = size ?? 40.0 
+            Prop("size") { (view: LumisIconView, size: Double?) in
+                view.lastProps.size = size ?? 40.0
                 view.updateFromProps()
             }
-            Prop("grayscale") { (view: LumisIconView, grayscale: Bool?) in 
-                view.lastProps.grayscale = grayscale ?? false 
+            Prop("grayscale") { (view: LumisIconView, grayscale: Bool?) in
+                view.lastProps.grayscale = grayscale ?? false
                 view.updateFromProps()
             }
+        }
+
+        // MARK: - Live Activity Functions
+
+        Function("startLiveActivity") { (goalMinutes: Int, remainingSeconds: Int, luxLevel: Int) -> String? in
+            if #available(iOS 16.1, *) {
+                return LumisLiveActivityManager.shared.startActivity(
+                    goalMinutes: goalMinutes,
+                    remainingSeconds: remainingSeconds,
+                    luxLevel: luxLevel
+                )
+            }
+            return nil
+        }
+
+        Function("updateLiveActivity") { (remainingSeconds: Int, luxLevel: Int, creditRate: Double, isIndoors: Bool) in
+            if #available(iOS 16.1, *) {
+                LumisLiveActivityManager.shared.updateActivity(
+                    remainingSeconds: remainingSeconds,
+                    luxLevel: luxLevel,
+                    creditRate: creditRate,
+                    isIndoors: isIndoors
+                )
+            }
+        }
+
+        Function("endLiveActivity") {
+            if #available(iOS 16.1, *) {
+                LumisLiveActivityManager.shared.endActivity()
+            }
+        }
+
+        Function("isLiveActivityActive") { () -> Bool in
+            if #available(iOS 16.1, *) {
+                return LumisLiveActivityManager.shared.isActivityActive()
+            }
+            return false
+        }
+
+        Function("areLiveActivitiesEnabled") { () -> Bool in
+            if #available(iOS 16.1, *) {
+                return ActivityAuthorizationInfo().areActivitiesEnabled
+            }
+            return false
+        }
+
+        // MARK: - Shield Data Sync (for ShieldConfigurationExtension)
+
+        Function("updateShieldData") { (goalMinutes: Int, lightMinutes: Int, currentStreak: Int) in
+            // Write to shared App Group UserDefaults so ShieldConfigurationExtension can read it
+            let sharedDefaults = UserDefaults(suiteName: "group.com.nitant.lumis")
+            sharedDefaults?.set(goalMinutes, forKey: "dailyGoalMinutes")
+            sharedDefaults?.set(lightMinutes, forKey: "todayLightMinutes")
+            sharedDefaults?.set(currentStreak, forKey: "currentStreak")
+            sharedDefaults?.synchronize()
         }
     }
 }

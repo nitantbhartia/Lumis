@@ -227,6 +227,54 @@ class NotificationService {
     }
   }
 
+  // Progress notification for active tracking sessions
+  async updateProgressNotification(params: {
+    remainingMinutes: number;
+    creditRate: number;
+    luxLevel: number;
+  }): Promise<void> {
+    if (!this.permissionGranted) {
+      await this.requestPermissions();
+    }
+
+    if (!this.permissionGranted) return;
+
+    // Cancel existing progress notification first
+    await this.dismissProgressNotification();
+
+    const { remainingMinutes, creditRate, luxLevel } = params;
+    const isIndoors = creditRate < 1;
+
+    const body = isIndoors
+      ? `${remainingMinutes} min remaining • ${luxLevel.toLocaleString()} lux • Indoor 0.5x`
+      : `${remainingMinutes} min remaining • ${luxLevel.toLocaleString()} lux`;
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        identifier: 'tracking-progress',
+        content: {
+          title: isIndoors ? '⚠️ Lumis Active' : '☀️ Lumis Active',
+          body,
+          sound: false, // Silent update
+          priority: Notifications.AndroidNotificationPriority.LOW,
+          sticky: Platform.OS === 'android', // Keep notification persistent on Android
+          data: { type: 'tracking-progress' },
+        },
+        trigger: null, // Send immediately
+      });
+    } catch (error) {
+      console.error('Error updating progress notification:', error);
+    }
+  }
+
+  async dismissProgressNotification(): Promise<void> {
+    try {
+      await Notifications.dismissNotificationAsync('tracking-progress');
+    } catch {
+      // Notification may not exist, ignore
+    }
+  }
+
   async cancelAllNotifications(): Promise<void> {
     await Notifications.cancelAllScheduledNotificationsAsync();
   }

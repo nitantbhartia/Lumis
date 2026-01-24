@@ -200,6 +200,10 @@ interface LumisState {
   useMonthlyFreeUnlock: () => boolean; // Returns true if unlock was available
   getRemainingFreeUnlocks: () => number;
   performEmergencyUnlock: () => void; // Full unlock flow with all consequences
+
+  // Shield State (Synced with Native)
+  isShieldEngaged: boolean;
+  setShieldEngaged: (engaged: boolean) => void;
 }
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -698,6 +702,10 @@ export const useLumisStore = create<LumisState>()(
           emergencyUnlockUsedToday: true,
         });
       },
+
+      // Shield State
+      isShieldEngaged: false,
+      setShieldEngaged: (engaged) => set({ isShieldEngaged: engaged }),
     }),
     {
       name: 'lumis-storage',
@@ -733,6 +741,7 @@ export const useLumisStore = create<LumisState>()(
         hasSeenLuxPrimer: state.hasSeenLuxPrimer,
         passiveVerificationSuccessCount: state.passiveVerificationSuccessCount,
         passiveVerificationFailCount: state.passiveVerificationFailCount,
+        isShieldEngaged: state.isShieldEngaged,
         monthlyFreeUnlocksUsed: state.monthlyFreeUnlocksUsed,
         lastUnlockResetMonth: state.lastUnlockResetMonth,
         sunlightFrequency: state.sunlightFrequency,

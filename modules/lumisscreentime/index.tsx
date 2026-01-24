@@ -135,6 +135,79 @@ export function hello(): string {
     return NativeModule.hello ? NativeModule.hello() : "hello function missing";
 }
 
+// MARK: - Live Activity Functions
+
+/**
+ * Start a Live Activity for the tracking session.
+ * Shows on Dynamic Island (iPhone 14 Pro+) and Lock Screen.
+ * @returns Activity ID if successful, null otherwise
+ */
+export function startLiveActivity(goalMinutes: number, remainingSeconds: number, luxLevel: number): string | null {
+    if (!NativeModule || !NativeModule.startLiveActivity) {
+        console.warn('[LumisScreenTime] startLiveActivity not available');
+        return null;
+    }
+    return NativeModule.startLiveActivity(goalMinutes, remainingSeconds, luxLevel);
+}
+
+/**
+ * Update the current Live Activity with new state.
+ * Call this periodically during tracking.
+ */
+export function updateLiveActivity(remainingSeconds: number, luxLevel: number, creditRate: number, isIndoors: boolean): void {
+    if (!NativeModule || !NativeModule.updateLiveActivity) {
+        return;
+    }
+    NativeModule.updateLiveActivity(remainingSeconds, luxLevel, creditRate, isIndoors);
+}
+
+/**
+ * End the current Live Activity.
+ * Call when tracking completes or is cancelled.
+ */
+export function endLiveActivity(): void {
+    if (!NativeModule || !NativeModule.endLiveActivity) {
+        return;
+    }
+    NativeModule.endLiveActivity();
+}
+
+/**
+ * Check if a Live Activity is currently running.
+ */
+export function isLiveActivityActive(): boolean {
+    if (!NativeModule || !NativeModule.isLiveActivityActive) {
+        return false;
+    }
+    return NativeModule.isLiveActivityActive();
+}
+
+/**
+ * Check if Live Activities are enabled on this device.
+ * Requires iOS 16.1+ and user hasn't disabled them.
+ */
+export function areLiveActivitiesEnabled(): boolean {
+    if (!NativeModule || !NativeModule.areLiveActivitiesEnabled) {
+        return false;
+    }
+    return NativeModule.areLiveActivitiesEnabled();
+}
+
+// MARK: - Shield Data Sync Functions
+
+/**
+ * Update shield display data for the ShieldConfigurationExtension.
+ * This syncs goal progress to the custom blocked app screen.
+ * Call this when shield is activated and during tracking sessions.
+ */
+export function updateShieldData(goalMinutes: number, lightMinutes: number, currentStreak: number): void {
+    if (!NativeModule || !NativeModule.updateShieldData) {
+        console.warn('[LumisScreenTime] updateShieldData not available');
+        return;
+    }
+    NativeModule.updateShieldData(goalMinutes, lightMinutes, currentStreak);
+}
+
 import { requireNativeViewManager } from 'expo-modules-core';
 import React from 'react';
 import { ViewProps } from 'react-native';

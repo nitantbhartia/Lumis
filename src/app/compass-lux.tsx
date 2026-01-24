@@ -128,8 +128,9 @@ export default function CompassLuxScreen() {
     const [showPrimer, setShowPrimer] = useState(!hasSeenLuxPrimer);
 
     // Check if this is a fallback invocation (user detected indoors)
-    const params = useLocalSearchParams();
+    const params = useLocalSearchParams<{ fallback?: string; initialGoal?: string }>();
     const isFallback = params.fallback === 'true';
+    const initialGoal = params.initialGoal;
 
     const glowAmber = useSharedValue(0);
     const pulseScale = useSharedValue(1);
@@ -223,7 +224,10 @@ export default function CompassLuxScreen() {
                 // Automatic transition after short delay
                 if (targetLux >= 1000) {
                     setTimeout(() => {
-                        router.replace('/tracking');
+                        router.replace({
+                            pathname: '/tracking',
+                            params: initialGoal ? { initialGoal } : undefined
+                        });
                     }, 1500);
                 }
             }

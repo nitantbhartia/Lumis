@@ -1,0 +1,8 @@
+** BUILD FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 Compiling\ LumisWidgetExtensionBundle.swift /Users/nitant/Downloads/Lumis/ios/LumisWidgetExtension/LumisWidgetExtensionBundle.swift (in target 'LumisWidgetExtensionExtension' from project 'Lumis')
+	SwiftCompile normal arm64 /Users/nitant/Downloads/Lumis/ios/LumisWidgetExtension/LumisWidgetExtensionBundle.swift (in target 'LumisWidgetExtensionExtension' from project 'Lumis')
+	Building workspace Lumis with scheme Lumis and configuration Debug
+(3 failures)

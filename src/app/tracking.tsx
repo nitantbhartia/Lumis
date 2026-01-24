@@ -24,10 +24,20 @@ import { Sun, Shield, Lock, Trash2, X, Zap, AlertTriangle } from 'lucide-react-n
 import { calculateVitaminD } from '@/lib/bio-metrics';
 import Svg, { Circle, G, Line } from 'react-native-svg';
 import { useLumisStore } from '@/lib/state/lumis-store';
-import { deactivateShield, activateShield, LumisIcon } from '@/lib/screen-time';
+import {
+  deactivateShield,
+  activateShield,
+  LumisIcon,
+  startLiveActivity,
+  updateLiveActivity,
+  endLiveActivity,
+  areLiveActivitiesEnabled,
+  syncShieldDisplayData
+} from '@/lib/screen-time';
 import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
 import { CoolDownModal } from '@/components/CoolDownModal';
 import { ShieldPreviewRow } from '@/components/ShieldPreviewRow';
+import { notificationService } from '@/lib/notifications';
 
 const { width } = Dimensions.get('window');
 const TIMER_SIZE = width * 0.75;
@@ -189,6 +199,38 @@ const LuxIntensityMeter = ({ lux }: { lux: number }) => {
 
 
 
+// --- 3. Indoor Warning Overlay ---
+const IndoorWarningOverlay = ({ lux, isVisible }: { lux: number; isVisible: boolean }) => {
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(isVisible ? 1 : 0, { duration: 300 });
+  }, [isVisible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    pointerEvents: opacity.value > 0 ? 'auto' : 'none',
+  }));
+
+  if (!isVisible) return null;
+
+  return (
+    <AnimatedView style={[styles.indoorOverlay, animatedStyle]}>
+      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={styles.indoorContent}>
+        <AlertTriangle size={32} color="#FFB347" strokeWidth={2} />
+        <Text style={styles.indoorTitle}>Indoor Light Detected</Text>
+        <Text style={styles.indoorSubtitle}>Earning at 0.5x rate</Text>
+        <View style={styles.indoorLuxBadge}>
+          <Sun size={16} color="#FFB347" />
+          <Text style={styles.indoorLuxText}>{lux.toLocaleString()} LUX</Text>
+        </View>
+        <Text style={styles.indoorHint}>Step outside to earn full credit</Text>
+      </View>
+    </AnimatedView>
+  );
+};
+
 // --- 4. Science Ticker ---
 const ScienceTicker = () => {
   const [msgIndex, setMsgIndex] = useState(0);
@@ -243,6 +285,13 @@ export default function TrackingScreen() {
 
   const { lux, steps } = useSmartEnvironment();
   const [sessionSeconds, setSessionSeconds] = useState(0);
+
+  // Indoor detection state
+  const [isIndoors, setIsIndoors] = useState(false);
+  const [creditRate, setCreditRate] = useState(1.0);
+  const lowLuxStartTime = useRef<number | null>(null);
+  const LUX_THRESHOLD = 500;
+  const GRACE_PERIOD_MS = 15000;
   const [sessionCoordinates, setSessionCoordinates] = useState<{ latitude: number, longitude: number, timestamp: number }[]>([]);
   const accumulatedMinutesRef = useRef(todayProgress.lightMinutes);
 
@@ -273,6 +322,14 @@ export default function TrackingScreen() {
     // Activate shields
     if (Platform.OS === 'ios') {
       activateShield();
+      // Sync initial shield display data
+      syncShieldDisplayData();
+
+      // Start Live Activity for lock screen / Dynamic Island
+      if (areLiveActivitiesEnabled()) {
+        const initialRemaining = Math.max(0, (effectiveGoal - accumulatedMinutesRef.current) * 60);
+        startLiveActivity(effectiveGoal, Math.round(initialRemaining), lux);
+      }
     }
 
     // Location Tracking
@@ -294,18 +351,48 @@ export default function TrackingScreen() {
 
     return () => {
       setTrackingActive(false);
+      // End Live Activity when leaving tracking
+      if (Platform.OS === 'ios') {
+        endLiveActivity();
+      }
     };
   }, []);
 
-  // Timer Tick
+  // Indoor detection - monitor lux with 15s grace period
+  useEffect(() => {
+    if (isGoalReached) return;
+
+    if (lux < LUX_THRESHOLD) {
+      if (!lowLuxStartTime.current) {
+        lowLuxStartTime.current = Date.now();
+      }
+
+      const elapsed = Date.now() - lowLuxStartTime.current;
+      if (elapsed >= GRACE_PERIOD_MS && !isIndoors) {
+        setIsIndoors(true);
+        setCreditRate(0.5);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+    } else {
+      // Lux recovered - reset to full credit
+      lowLuxStartTime.current = null;
+      if (isIndoors) {
+        setIsIndoors(false);
+        setCreditRate(1.0);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  }, [lux, isGoalReached, isIndoors]);
+
+  // Timer Tick - apply credit rate for indoor penalty
   useEffect(() => {
     if (isGoalReached) return;
 
     const interval = setInterval(async () => {
-      setSessionSeconds((prev) => prev + 1);
+      setSessionSeconds((prev) => prev + creditRate);
 
       // Record coordinate every 30 seconds to save batt
-      if ((sessionSeconds + 1) % 30 === 0) {
+      if (Math.floor(sessionSeconds + 1) % 30 === 0) {
         try {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           setSessionCoordinates(prev => [
@@ -317,7 +404,56 @@ export default function TrackingScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isGoalReached, sessionSeconds]);
+  }, [isGoalReached, sessionSeconds, creditRate]);
+
+  // Progress notification updates every 30 seconds
+  useEffect(() => {
+    if (isGoalReached) {
+      notificationService.dismissProgressNotification();
+      return;
+    }
+
+    const updateNotification = () => {
+      notificationService.updateProgressNotification({
+        remainingMinutes: Math.ceil(remainingSeconds / 60),
+        creditRate,
+        luxLevel: lux,
+      });
+    };
+
+    // Initial notification
+    updateNotification();
+
+    // Update every 30 seconds
+    const interval = setInterval(updateNotification, 30000);
+
+    return () => {
+      clearInterval(interval);
+      notificationService.dismissProgressNotification();
+    };
+  }, [isGoalReached, Math.floor(remainingSeconds / 30), creditRate]);
+
+  // Live Activity and Shield Display updates every 5 seconds for smoother UI
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || isGoalReached) return;
+
+    const updateLA = () => {
+      updateLiveActivity(
+        Math.round(remainingSeconds),
+        lux,
+        creditRate,
+        isIndoors
+      );
+      // Also sync shield display data so blocked app screen shows current progress
+      syncShieldDisplayData();
+    };
+
+    // Update every 5 seconds
+    const interval = setInterval(updateLA, 5000);
+    updateLA(); // Initial update
+
+    return () => clearInterval(interval);
+  }, [isGoalReached, Math.floor(remainingSeconds / 5), creditRate, isIndoors, lux]);
 
   // Goal Completion
   useEffect(() => {
@@ -419,6 +555,7 @@ export default function TrackingScreen() {
       </LinearGradient>
 
       <CoolDownModal visible={showCoolDown} onComplete={confirmExit} />
+      <IndoorWarningOverlay lux={lux} isVisible={isIndoors} />
     </View>
   );
 }
@@ -562,5 +699,48 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.5)',
     textDecorationLine: 'underline',
   },
-  // Modal styles removed (moved to component)
+  // Indoor Warning Overlay
+  indoorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  indoorContent: {
+    alignItems: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  indoorTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFF',
+    marginTop: 8,
+  },
+  indoorSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_500Medium',
+    color: '#FFB347',
+  },
+  indoorLuxBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 179, 71, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  indoorLuxText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#FFB347',
+  },
+  indoorHint: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 8,
+  },
 });

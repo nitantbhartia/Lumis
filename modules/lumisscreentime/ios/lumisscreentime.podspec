@@ -9,8 +9,8 @@ Pod::Spec.new do |s|
   s.source         = { :git => 'https://github.com/lumis.git', :tag => s.version.to_s }
   s.source_files   = '*.swift'
   s.dependency 'ExpoModulesCore'
-  s.frameworks     = 'FamilyControls', 'ManagedSettings', 'DeviceActivity'
-  s.weak_frameworks = 'FamilyControls', 'ManagedSettings', 'DeviceActivity'
+  s.frameworks     = 'FamilyControls', 'ManagedSettings', 'DeviceActivity', 'ActivityKit'
+  s.weak_frameworks = 'FamilyControls', 'ManagedSettings', 'DeviceActivity', 'ActivityKit'
   s.swift_version  = '5.4'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
 end

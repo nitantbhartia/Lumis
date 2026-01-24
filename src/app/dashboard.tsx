@@ -77,7 +77,7 @@ export default function DashboardScreen() {
     const handleStartTracking = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         router.push({
-            pathname: '/tracking',
+            pathname: '/compass-lux',
             params: { initialGoal: currentSessionGoal }
         });
     };

@@ -9,10 +9,17 @@ import {
     getAppToggles as nativeGetAppToggles,
     toggleApp as nativeToggleApp,
     clearMetadata as nativeClearMetadata,
+    startLiveActivity as nativeStartLiveActivity,
+    updateLiveActivity as nativeUpdateLiveActivity,
+    endLiveActivity as nativeEndLiveActivity,
+    isLiveActivityActive as nativeIsLiveActivityActive,
+    areLiveActivitiesEnabled as nativeAreLiveActivitiesEnabled,
+    updateShieldData as nativeUpdateShieldData,
     LumisIcon
 } from 'lumisscreentime';
 import { requireNativeModule } from 'expo-modules-core';
 import { Platform, Alert, Linking } from 'react-native';
+import { useLumisStore } from '@/lib/state/lumis-store';
 
 const isAvailable = Platform.OS === 'ios';
 
@@ -157,12 +164,19 @@ export const showAppPicker = async (): Promise<PickerResult> => {
 /**
  * Activate shields on selected apps.
  * Call this when morning shield should be enforced.
+ * Automatically syncs state to Zustand store.
  */
 export const activateShield = (): boolean => {
     if (!isAvailable) return false;
     try {
         const result = nativeActivateShield();
         console.log('[ScreenTime] activateShield result:', result);
+
+        // Sync to store
+        if (result) {
+            useLumisStore.getState().setShieldEngaged(true);
+        }
+
         return result;
     } catch (error) {
         console.error('[ScreenTime] Error activating shield:', error);
@@ -173,12 +187,19 @@ export const activateShield = (): boolean => {
 /**
  * Deactivate all shields.
  * Call this when user completes their sunlight session.
+ * Automatically syncs state to Zustand store.
  */
 export const deactivateShield = (): boolean => {
     if (!isAvailable) return false;
     try {
         const result = nativeDeactivateShield();
         console.log('[ScreenTime] deactivateShield result:', result);
+
+        // Sync to store
+        if (result) {
+            useLumisStore.getState().setShieldEngaged(false);
+        }
+
         return result;
     } catch (error) {
         console.error('[ScreenTime] Error deactivating shield:', error);
@@ -227,14 +248,16 @@ export const getSelectedAppCount = (): number => {
 
 /**
  * Check if shield is currently active.
+ * Falls back to Zustand store state if native call fails.
  */
 export const isShieldActive = (): boolean => {
     if (!isAvailable) return false;
     try {
         return nativeIsShieldActive();
     } catch (error) {
-        console.error('[ScreenTime] Error checking shield status:', error);
-        return false;
+        console.error('[ScreenTime] Error checking shield status, falling back to store:', error);
+        // Fallback to store state if native read fails
+        return useLumisStore.getState().isShieldEngaged;
     }
 };
 
@@ -265,6 +288,113 @@ export const clearMetadata = (): void => {
         nativeClearMetadata();
     } catch (e) {
         console.error('Failed to clear metadata', e);
+    }
+};
+
+// MARK: - Live Activity Functions
+
+/**
+ * Start a Live Activity for tracking session.
+ * Shows on Dynamic Island and Lock Screen.
+ * @returns Activity ID if successful, null otherwise
+ */
+export const startLiveActivity = (
+    goalMinutes: number,
+    remainingSeconds: number,
+    luxLevel: number
+): string | null => {
+    if (!isAvailable) return null;
+    try {
+        const result = nativeStartLiveActivity(goalMinutes, remainingSeconds, luxLevel);
+        console.log('[ScreenTime] startLiveActivity result:', result);
+        return result ?? null;
+    } catch (error) {
+        console.error('[ScreenTime] Error starting Live Activity:', error);
+        return null;
+    }
+};
+
+/**
+ * Update the Live Activity with current session state.
+ * Call this every few seconds during tracking.
+ */
+export const updateLiveActivity = (
+    remainingSeconds: number,
+    luxLevel: number,
+    creditRate: number,
+    isIndoors: boolean
+): void => {
+    if (!isAvailable) return;
+    try {
+        nativeUpdateLiveActivity(remainingSeconds, luxLevel, creditRate, isIndoors);
+    } catch (error) {
+        console.error('[ScreenTime] Error updating Live Activity:', error);
+    }
+};
+
+/**
+ * End the current Live Activity.
+ * Call this when tracking session completes or is cancelled.
+ */
+export const endLiveActivity = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeEndLiveActivity();
+        console.log('[ScreenTime] Live Activity ended');
+    } catch (error) {
+        console.error('[ScreenTime] Error ending Live Activity:', error);
+    }
+};
+
+/**
+ * Check if a Live Activity is currently running.
+ */
+export const isLiveActivityActive = (): boolean => {
+    if (!isAvailable) return false;
+    try {
+        return nativeIsLiveActivityActive() ?? false;
+    } catch (error) {
+        console.error('[ScreenTime] Error checking Live Activity status:', error);
+        return false;
+    }
+};
+
+/**
+ * Check if Live Activities are enabled on this device.
+ * Requires iOS 16.1+ and user permission.
+ */
+export const areLiveActivitiesEnabled = (): boolean => {
+    if (!isAvailable) return false;
+    try {
+        return nativeAreLiveActivitiesEnabled() ?? false;
+    } catch (error) {
+        console.error('[ScreenTime] Error checking Live Activities enabled:', error);
+        return false;
+    }
+};
+
+// MARK: - Shield Display Data Sync
+
+/**
+ * Sync shield display data to the ShieldConfigurationExtension.
+ * This updates the custom blocked app screen with current goal progress.
+ * Call this when:
+ * - Shield is activated
+ * - During tracking sessions (to show updated progress)
+ * - When daily progress changes
+ */
+export const syncShieldDisplayData = (): void => {
+    if (!isAvailable) return;
+    try {
+        const store = useLumisStore.getState();
+        const goalMinutes = store.dailyGoalMinutes;
+        const lightMinutes = Math.floor(store.todayProgress?.lightMinutes ?? 0);
+        const currentStreak = store.currentStreak;
+
+        nativeUpdateShieldData(goalMinutes, lightMinutes, currentStreak);
+        console.log('[ScreenTime] Shield display data synced:', { goalMinutes, lightMinutes, currentStreak });
+    } catch (error) {
+        console.error('[ScreenTime] Error syncing shield display data:', error);
     }
 };
 

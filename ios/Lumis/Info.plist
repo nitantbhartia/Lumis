@@ -42,6 +42,8 @@
     <string>1</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <key>LSApplicationCategoryType</key>
+    <string/>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -53,8 +55,14 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your calendars</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your calendars</string>
     <key>NSCameraUsageDescription</key>
     <string>Lumis uses the camera sensor to accurately measure ambient light levels and optimize your light intake.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your contacts</string>
     <key>NSFaceIDUsageDescription</key>
     <string>Lumis uses FaceID to secure your app lock settings.</string>
     <key>NSFamilyControlsUsageDescription</key>
@@ -65,15 +73,31 @@
     <string>Lumis can sync your outdoor light exposure activities back to the Health app.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Lumis uses your location to track outdoor time and provide weather updates.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Lumis uses your location to provide real-time weather and UV data for your exact position.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Lumis uses the microphone for enhanced interaction features.</string>
     <key>NSMotionUsageDescription</key>
     <string>Lumis tracks your steps to reward you for staying active outdoors.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to save photos</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your photos</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your reminders</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your reminders</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
+    </array>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>fetch</string>
     </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>

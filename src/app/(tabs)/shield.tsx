@@ -6,7 +6,7 @@ import { Shield, Lock, Unlock, Instagram, Video, Twitter, Facebook, Youtube, Mes
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
 import * as Haptics from 'expo-haptics';
-import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp, LumisIcon, clearMetadata } from '@/lib/screen-time';
+import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp, LumisIcon, clearMetadata, syncShieldDisplayData } from '@/lib/screen-time';
 import { useFocusEffect } from 'expo-router';
 import { HighFrictionUnlockModal } from '@/components/shield/HighFrictionUnlockModal';
 import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
@@ -24,13 +24,13 @@ const { width } = Dimensions.get('window');
 export default function ShieldHub() {
     const insets = useSafeAreaInsets();
     const { blockedApps, dailyGoalMinutes, todayProgress, currentStreak } = useLumisStore();
+    const isShieldEngaged = useLumisStore((s) => s.isShieldEngaged);
     const { lux } = useSmartEnvironment();
     const weather = useWeather();
     const userName = useAuthStore((s) => s.userName);
 
     const [hasPermission, setHasPermission] = useState(false);
     const [isPickerLoading, setIsPickerLoading] = useState(false);
-    const [shieldStatus, setShieldStatus] = useState(false);
     const [showInstructions, setShowInstructions] = useState(false);
     const [showBreakModal, setShowBreakModal] = useState(false);
 
@@ -48,21 +48,30 @@ export default function ShieldHub() {
 
     useFocusEffect(
         useCallback(() => {
-            const checkStatus = async () => {
+            const syncShieldState = async () => {
                 const status = await getScreenTimePermissionStatus();
                 setHasPermission(status);
+
                 if (status) {
-                    setShieldStatus(isShieldActive());
-                    // Sync to global store for dashboard consistency
+                    // Read native state
+                    const nativeStatus = isShieldActive();
+
+                    // If mismatch detected, trust native and update store
+                    if (nativeStatus !== isShieldEngaged) {
+                        console.warn('[Shield] State mismatch detected - Native:', nativeStatus, 'Store:', isShieldEngaged);
+                        useLumisStore.getState().setShieldEngaged(nativeStatus);
+                    }
+
+                    // Sync blocked apps list
                     useLumisStore.getState().syncWithNativeBlockedApps();
                 }
             };
-            checkStatus();
-        }, [])
+            syncShieldState();
+        }, [isShieldEngaged])
     );
 
     const isGoalMet = todayProgress.lightMinutes >= currentSessionGoal;
-    const isLocked = shieldStatus && !isGoalMet;
+    const isLocked = isShieldEngaged && !isGoalMet;
 
     const details = isLocked ? {
         lightRemaining: Math.max(0, currentSessionGoal - todayProgress.lightMinutes),
@@ -133,8 +142,10 @@ export default function ShieldHub() {
         }
 
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        const result = activateShield();
-        setShieldStatus(result);
+        // activateShield now automatically syncs to store
+        activateShield();
+        // Sync shield display data to the custom blocked app screen
+        syncShieldDisplayData();
     };
 
     const handleBreakProtocol = () => {
@@ -144,8 +155,8 @@ export default function ShieldHub() {
 
     const executeBreak = () => {
         setShowBreakModal(false);
+        // deactivateShield now automatically syncs to store
         deactivateShield();
-        setShieldStatus(false);
         // Note: performEmergencyUnlock is called inside HighFrictionUnlockModal
         // which handles streak reset and tracking
     };
@@ -194,7 +205,7 @@ export default function ShieldHub() {
                                 </View>
                             ) : (
                                 <Text style={styles.statusDesc}>
-                                    {shieldStatus ? "Sunlight goal met. Apps unlocked." : "Shield is currently inactive."}
+                                    {isShieldEngaged ? "Sunlight goal met. Apps unlocked." : "Shield is currently inactive."}
                                 </Text>
                             )}
                         </View>
@@ -215,15 +226,17 @@ export default function ShieldHub() {
                             {blockedApps.length > 0 ? (
                                 <View style={styles.gridContainer}>
                                     {blockedApps.map((app, index) => (
-                                        <View key={`${app.name}-${index}-${blockedApps.length}-${isLocked}`} style={[styles.gridItem, isLocked && styles.gridItemLocked]}>
-                                            <LumisIcon
-                                                style={{ width: 40, height: 40 }}
-                                                appName={app.name}
-                                                tokenData={(app as any).tokenData}
-                                                isCategory={!!app.isCategory}
-                                                size={40}
-                                                grayscale={isLocked}
-                                            />
+                                        <View key={`${app.name}-${index}`} style={[styles.gridItem, isLocked && styles.gridItemLocked]}>
+                                            <View style={[styles.gridIcon, isLocked && styles.grayscale]}>
+                                                <LumisIcon
+                                                    style={{ width: 40, height: 40 }}
+                                                    appName={app.name}
+                                                    tokenData={(app as any).tokenData}
+                                                    isCategory={!!app.isCategory}
+                                                    size={40}
+                                                    grayscale={isLocked}
+                                                />
+                                            </View>
                                             <LumisIcon
                                                 style={{ width: '100%', height: 20, marginTop: 4 }}
                                                 appName={app.name}
@@ -251,7 +264,7 @@ export default function ShieldHub() {
 
                 {/* Bottom Controls */}
                 <View style={[styles.bottomControls, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-                    {shieldStatus ? (
+                    {isShieldEngaged ? (
                         <>
                             {/* Active Shield State */}
                             <LumisHeroButton
@@ -270,7 +283,7 @@ export default function ShieldHub() {
                             )}
 
                             {!isLocked && (
-                                <Pressable style={styles.breakProtocolButton} onPress={() => { deactivateShield(); setShieldStatus(false); }}>
+                                <Pressable style={styles.breakProtocolButton} onPress={() => { deactivateShield(); }}>
                                     <Text style={styles.breakProtocolText}>Deactivate Shield</Text>
                                 </Pressable>
                             )}
