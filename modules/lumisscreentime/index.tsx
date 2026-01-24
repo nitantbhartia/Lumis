@@ -1,19 +1,29 @@
 import { requireNativeModule } from 'expo-modules-core';
 import { Alert } from 'react-native';
 
-// Use lowercase name as used in most Expo projects
+// Use PascalCase as defined in Swift Name("LumisScreenTime")
 let NativeModule: any = null;
 try {
-    NativeModule = requireNativeModule('lumisscreentime');
-    console.log('[LumisScreenTime] Native module loaded:', !!NativeModule);
-
-    if (NativeModule) {
-        if (NativeModule.hello) {
-            console.log('[LumisScreenTime] Bridge check:', NativeModule.hello());
-        }
-    }
+    NativeModule = requireNativeModule('LumisScreenTime');
+    console.log('[LumisScreenTime] Native module loaded (LumisScreenTime):', !!NativeModule);
 } catch (e: any) {
-    console.error('[LumisScreenTime] Failed to load native module:', e);
+    console.error('[LumisScreenTime] Failed to load "LumisScreenTime":', e?.message);
+}
+
+if (!NativeModule) {
+    try {
+        // Fallback to lowercase just in case
+        NativeModule = requireNativeModule('lumisscreentime');
+        console.log('[LumisScreenTime] Native module loaded (lumisscreentime):', !!NativeModule);
+    } catch (e: any) {
+        console.error('[LumisScreenTime] Failed to load "lumisscreentime":', e?.message);
+    }
+}
+
+if (NativeModule && NativeModule.hello) {
+    console.log('[LumisScreenTime] Bridge check:', NativeModule.hello());
+} else {
+    console.error('[LumisScreenTime] Bridge check failed. NativeModule is:', NativeModule);
 }
 
 export async function requestAuthorization(): Promise<boolean> {
@@ -36,7 +46,7 @@ export async function getAuthorizationStatus(): Promise<string> {
  * Present the iOS FamilyActivityPicker for users to select which apps to shield.
  * Returns true when selection is complete, false if cancelled or error.
  */
-export async function showAppPicker(): Promise<boolean> {
+export async function showAppPicker(): Promise<any> {
     if (!NativeModule || !NativeModule.showAppPicker) {
         console.warn('[LumisScreenTime] showAppPicker not available');
         return false;
@@ -104,7 +114,7 @@ export function areAppsBlocked(): boolean {
     return NativeModule.areAppsBlocked();
 }
 
-export function getAppToggles(): { name: string, isEnabled: boolean, isCategory?: boolean }[] {
+export function getAppToggles(): { name: string, isEnabled: boolean, isCategory?: boolean, token?: string }[] {
     if (!NativeModule || !NativeModule.getAppToggles) return [];
     return NativeModule.getAppToggles();
 }
@@ -112,6 +122,12 @@ export function getAppToggles(): { name: string, isEnabled: boolean, isCategory?
 export function toggleApp(name: string, enabled: boolean): boolean {
     if (!NativeModule || !NativeModule.toggleApp) return false;
     return NativeModule.toggleApp(name, enabled);
+}
+
+export function clearMetadata(): void {
+    if (NativeModule && NativeModule.clearMetadata) {
+        NativeModule.clearMetadata();
+    }
 }
 
 export function hello(): string {
@@ -123,17 +139,28 @@ import { requireNativeViewManager } from 'expo-modules-core';
 import React from 'react';
 import { ViewProps } from 'react-native';
 
-const NativeLumisIcon = requireNativeViewManager('lumisscreentime');
+const NativeLumisIcon = requireNativeViewManager('LumisScreenTime');
 
 export interface LumisIconProps extends ViewProps {
-    iconProps: {
-        tokenData: string; // Base64 encoded data
-        isCategory: boolean;
-        size?: number;
-        grayscale?: boolean;
-    };
+    tokenData?: string;
+    appName?: string;
+    isCategory: boolean;
+    variant?: "icon" | "title";
+    size?: number;
+    grayscale?: boolean;
 }
 
 export const LumisIcon = (props: LumisIconProps) => {
-    return <NativeLumisIcon { ...props } />;
+    // We pass the props individually to the native view
+    return (
+        <NativeLumisIcon
+            style={props.style}
+            tokenData={props.tokenData}
+            appName={props.appName}
+            isCategory={props.isCategory}
+            variant={props.variant || "icon"}
+            size={props.size || 40}
+            grayscale={props.grayscale || false}
+        />
+    );
 };

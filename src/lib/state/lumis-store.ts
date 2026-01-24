@@ -12,6 +12,7 @@ export interface BlockedApp {
   isBlocked: boolean;
   isCategory?: boolean;
   token?: string;
+  tokenData?: string;
 }
 
 export interface DailyProgress {
@@ -229,23 +230,41 @@ export const useLumisStore = create<LumisState>()(
       toggleAppBlocked: (appId) => { },
 
       syncWithNativeBlockedApps: async () => {
-        // Import dynamically to avoid web crashes
         try {
           const { getAppToggles } = require('@/lib/screen-time');
           const toggles = getAppToggles ? getAppToggles() : [];
-          if (toggles && toggles.length > 0) {
-            const mappedApps = toggles.map((t: any) => ({
-              id: t.token || t.name,
-              name: t.name || "Unknown App",
-              icon: 'shield', // Generic/Native icon will be handled by UI
-              isBlocked: t.isEnabled,
-              token: t.token,
-              isCategory: t.isCategory
-            }));
-            set({ blockedApps: mappedApps });
+
+          console.log('[LumisStore] Syncing with native toggles:', toggles.length);
+
+          // If we have toggles, map them. If not, and we already have apps, keep them 
+          // (maybe native module is just initializing)
+          if (toggles.length === 0 && get().blockedApps.length > 0) {
+            console.log('[LumisStore] Native list empty, keeping existing apps');
+            return;
           }
+
+          const sanitizeName = (name: string, isCat: boolean) => {
+            if (!name) return isCat ? "Category" : "Shielded App";
+            const lower = name.toLowerCase().trim();
+            if (lower === "unknown app" || lower === "unknown" || lower.includes("unknown") || lower === "unim") {
+              return isCat ? "Category" : "Shielded App";
+            }
+            return name;
+          };
+
+          const mappedApps = toggles.map((t: any, index: number) => ({
+            id: t.tokenData || t.token || t.name || `${t.isCategory ? 'cat' : 'app'}-${index}`,
+            name: sanitizeName(t.name, t.isCategory === true),
+            icon: 'shield',
+            isBlocked: t.isEnabled !== false,
+            token: t.tokenData || t.token,
+            isCategory: t.isCategory === true,
+            tokenData: t.tokenData
+          }));
+
+          set({ blockedApps: mappedApps });
         } catch (e) {
-          console.log("Failed to sync blocked apps", e);
+          console.error("[LumisStore] Failed to sync blocked apps:", e);
         }
       },
 

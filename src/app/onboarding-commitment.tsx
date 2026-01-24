@@ -173,17 +173,8 @@ export default function OnboardingCommitmentScreen() {
             if (authResult) {
                 const pickerResult = await showAppPicker();
                 if (pickerResult.success) {
-                    const updatedApps = pickerResult.toggles.map((t, index) => ({
-                        id: `${t.name.toLowerCase().replace(/\s+/g, '_')}_${index}`,
-                        name: t.name,
-                        icon: t.isCategory ? 'layers' : 'shield',
-                        isBlocked: t.isEnabled,
-                        isCategory: t.isCategory,
-                        token: t.token
-                    }));
-                    if (updatedApps.length > 0) {
-                        setBlockedApps(updatedApps);
-                    }
+                    // Sync immediately to store from native metadata
+                    await useLumisStore.getState().syncWithNativeBlockedApps();
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     setIsLocked(true);
                     lockScale.value = withSequence(withSpring(1.3), withSpring(1));
@@ -334,12 +325,11 @@ export default function OnboardingCommitmentScreen() {
                                                     {app.token ? (
                                                         <LumisIcon
                                                             style={{ width: 18, height: 18 }}
-                                                            iconProps={{
-                                                                tokenData: app.token,
-                                                                isCategory: !!app.isCategory,
-                                                                size: 18,
-                                                                grayscale: false
-                                                            }}
+                                                            appName={app.name}
+                                                            tokenData={app.tokenData || app.token}
+                                                            isCategory={!!app.isCategory}
+                                                            size={18}
+                                                            grayscale={false}
                                                         />
                                                     ) : getAppIcon(app.name, 18, '#555')}
                                                 </View>

@@ -49,15 +49,14 @@ export const ShieldPreviewRow = ({ activeApps, lux = 0 }: ShieldPreviewRowProps)
             >
                 {activeApps.map((app, index) => (
                     <View key={`${app.id}-${index}`} style={styles.shieldIconWrapper}>
-                        {app.token ? (
+                        {app.token || app.tokenData ? (
                             <LumisIcon
                                 style={{ width: 24, height: 24 }}
-                                iconProps={{
-                                    tokenData: app.token,
-                                    isCategory: !!app.isCategory,
-                                    size: 24,
-                                    grayscale: true
-                                }}
+                                appName={app.name}
+                                tokenData={app.tokenData || app.token}
+                                isCategory={!!app.isCategory}
+                                size={24}
+                                grayscale={true}
                             />
                         ) : (
                             <Shield size={24} color="#888" />

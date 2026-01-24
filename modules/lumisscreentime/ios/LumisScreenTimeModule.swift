@@ -1,149 +1,26 @@
 import ExpoModulesCore
 import ManagedSettings
-import SwiftUI
 import FamilyControls
+import UIKit
 
-// MARK: - Models & Helpers
-
-extension FamilyActivitySelection {
-    var displayNames: [String] {
-        var names: [String] = []
-        for app in self.applications {
-            if let name = app.localizedDisplayName { names.append(name) }
-        }
-        for category in self.categories {
-            if let name = category.localizedDisplayName { names.append(name) }
-        }
-        return names.isEmpty ? ["Shielded App"] : names
-    }
-}
-
-struct LumisIconProps: Record {
-  @Field var tokenData: Data?
-  @Field var isCategory: Bool = false
-  @Field var size: Double = 40.0
-  @Field var grayscale: Bool = true
-}
-
-// MARK: - Native Views
-
-class LumisIconView: ExpoView {
-  let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
-  
-  required init(appContext: AppContext? = nil) {
-    super.init(appContext: appContext)
-    hostingController.view.backgroundColor = .clear
-    addSubview(hostingController.view)
-  }
-  
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    hostingController.view.frame = bounds
-  }
-  
-  func update(props: LumisIconProps) {
-    let decoder = PropertyListDecoder()
-    
-    if props.isCategory {
-      if let data = props.tokenData,
-         let token = try? decoder.decode(ActivityCategoryToken.self, from: data) {
-         let selection = FamilyActivitySelection(categoryTokens: [token])
-         hostingController.rootView = AnyView(
-           IconContainer(selection: selection, size: props.size, grayscale: props.grayscale)
-         )
-      }
-    } else {
-      if let data = props.tokenData,
-         let token = try? decoder.decode(ApplicationToken.self, from: data) {
-         let selection = FamilyActivitySelection(applicationTokens: [token])
-         hostingController.rootView = AnyView(
-           IconContainer(selection: selection, size: props.size, grayscale: props.grayscale)
-         )
-      }
-    }
-  }
-}
-
-struct IconContainer: View {
-  let selection: FamilyActivitySelection
-  let size: Double
-  let grayscale: Bool
-  
-  var body: some View {
-    ZStack {
-      Label(selection)
-        .labelStyle(.iconOnly)
-        .scaleEffect(size / 32.0)
-        .frame(width: size, height: size)
-        .grayscale(grayscale ? 1.0 : 0.0)
-    }
-    .frame(width: size, height: size)
-  }
-}
-
-// Controller for the system app picker
-class FamilyActivityPickerHostingController: UIViewController {
-    var onSelectionComplete: ((FamilyActivitySelection) -> Void)?
-    var onDismiss: (() -> Void)?
-    
-    private var selection = FamilyActivitySelection()
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .clear
-        
-        let picker = FamilyActivityPicker(selection: $selection)
-        let hostingController = UIHostingController(rootView: picker)
-        
-        addChild(hostingController)
-        view.addSubview(hostingController.view)
-        hostingController.view.frame = view.bounds
-        hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        hostingController.didMove(toParent: self)
-        
-        // Add Done/Cancel buttons
-        let navBar = UINavigationBar(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 44))
-        let navItem = UINavigationItem(title: "Select Apps")
-        navItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(doneAction))
-        navItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelAction))
-        navBar.setItems([navItem], animated: false)
-        view.addSubview(navBar)
-    }
-    
-    @objc func doneAction() {
-        onSelectionComplete?(selection)
-        dismiss(animated: true)
-    }
-    
-    @objc func cancelAction() {
-        onDismiss?()
-        dismiss(animated: true)
-    }
-}
-
-// MARK: - Main Module
+// NOTE: DO NOT IMPORT SwiftUI here. 
+// It conflicts with Expo's 'View' function name.
+// All SwiftUI views and the classes that host them are in LumisScreenTimeUI.swift
 
 public class LumisScreenTimeModule: Module {
-    private var currentPickerController: UIViewController?
-    
-    private func getDefaults() -> UserDefaults? {
-        return UserDefaults.standard
-    }
-
     public func definition() -> ModuleDefinition {
-        Name("lumisscreentime")
+        Name("LumisScreenTime")
 
-        Function("hello") { () -> String in
-            return "Lumis Screen Time Module is Active!"
+        Function("hello") { () -> String in "Lumis Screen Time Module is Active!" }
+
+        Function("clearMetadata") {
+            UserDefaults.standard.removeObject(forKey: "LumisAppMetadata")
+            UserDefaults.standard.synchronize()
         }
 
         AsyncFunction("requestAuthorization") { () async throws -> Bool in
-            do {
-                try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-                return AuthorizationCenter.shared.authorizationStatus == .approved
-            } catch {
-                return false
-            }
+            try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            return AuthorizationCenter.shared.authorizationStatus == .approved
         }
 
         AsyncFunction("getAuthorizationStatus") { () async -> String in
@@ -164,63 +41,62 @@ public class LumisScreenTimeModule: Module {
                     promise.reject("NO_ROOT_VC", "Could not find root view controller")
                     return
                 }
-                
                 var topVC = rootVC
-                while let presented = topVC.presentedViewController {
-                    topVC = presented
-                }
+                while let presented = topVC.presentedViewController { topVC = presented }
                 
                 let pickerVC = FamilyActivityPickerHostingController()
+                let jsonDecoder = JSONDecoder()
+                if let blob = UserDefaults.standard.data(forKey: "LumisSelectionBlob") {
+                    if let existing = try? jsonDecoder.decode(FamilyActivitySelection.self, from: blob) { pickerVC.initialSelection = existing }
+                }
                 pickerVC.modalPresentationStyle = .formSheet
-                pickerVC.onDismiss = {
-                    promise.resolve(false)
-                }
+                pickerVC.onDismiss = { promise.resolve(false) }
                 pickerVC.onSelectionComplete = { selection in
-                    let encoder = PropertyListEncoder()
-                    var metadata: [[String: Any]] = []
-                    var toggles: [[String: Any]] = []
-                    
+                    let jsonEncoder = JSONEncoder()
+                    if let selectionData = try? jsonEncoder.encode(selection) {
+                        UserDefaults.standard.set(selectionData, forKey: "LumisSelectionBlob")
+                        UserDefaults.standard.synchronize()
+                    }
+                    var displayList: [[String: Any]] = []
+                    func getSafeName(_ name: String?, fallback: String) -> String {
+                        if let n = name, !n.isEmpty {
+                            let clean = n.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let lower = clean.lowercased()
+                            if lower != "unknown app" && lower != "unknown" && !lower.contains("unknown") && lower != "unim" { return clean }
+                        }
+                        return fallback
+                    }
                     for app in selection.applications {
-                        if let tokenData = try? encoder.encode(app.token) {
-                            let item: [String: Any] = ["name": app.localizedDisplayName ?? "Shielded App", "isEnabled": true, "isCategory": false, "token": tokenData]
-                            metadata.append(item)
-                            // var jsItem = item; jsItem.removeValue(forKey: "token"); toggles.append(jsItem)
-                            toggles.append(item)
-                        }
+                        let name = app.localizedDisplayName ?? ""
+                        let safeName = getSafeName(name, fallback: "Shielded App")
+                        let b64Token = (try? jsonEncoder.encode(app.token))?.base64EncodedString()
+                        displayList.append(["name": safeName, "isEnabled": true, "isCategory": false, "tokenData": b64Token as Any])
                     }
-                    
                     for category in selection.categories {
-                        if let tokenData = try? encoder.encode(category.token) {
-                            let item: [String: Any] = ["name": category.localizedDisplayName ?? "Category", "isEnabled": true, "isCategory": true, "token": tokenData]
-                            metadata.append(item)
-                            // var jsItem = item; jsItem.removeValue(forKey: "token"); toggles.append(jsItem)
-                            toggles.append(item)
-                        }
+                        let name = category.localizedDisplayName ?? ""
+                        let safeName = getSafeName(name, fallback: "Category")
+                        let b64Token = (try? jsonEncoder.encode(category.token))?.base64EncodedString()
+                        displayList.append(["name": safeName, "isEnabled": true, "isCategory": true, "tokenData": b64Token as Any])
                     }
-                    
-                    self.getDefaults()?.set(metadata, forKey: "LumisAppMetadata")
-                    promise.resolve(["success": true, "count": metadata.count, "toggles": toggles])
+                    UserDefaults.standard.set(displayList, forKey: "LumisAppMetadata")
+                    UserDefaults.standard.synchronize()
+                    promise.resolve(["success": true, "count": displayList.count, "toggles": displayList])
                 }
-                
                 topVC.present(pickerVC, animated: true)
             }
         }
 
         Function("getAppToggles") { () -> [[String: Any]] in
-            let metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
-            return metadata.map { item in
-                var newItem = item
-                // newItem.removeValue(forKey: "token")
-                return newItem
-            }
+            UserDefaults.standard.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
         }
         
         Function("toggleApp") { (name: String, enabled: Bool) -> Bool in
-            var metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
+            var metadata = UserDefaults.standard.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
             for i in 0..<metadata.count {
                 if metadata[i]["name"] as? String == name {
                     metadata[i]["isEnabled"] = enabled
-                    self.getDefaults()?.set(metadata, forKey: "LumisAppMetadata")
+                    UserDefaults.standard.set(metadata, forKey: "LumisAppMetadata")
+                    UserDefaults.standard.synchronize()
                     return true
                 }
             }
@@ -228,25 +104,19 @@ public class LumisScreenTimeModule: Module {
         }
 
         Function("activateShield") { () -> Bool in
-            let metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
-            let decoder = PropertyListDecoder()
-            var appTokens = Set<ApplicationToken>()
-            var categoryTokens = Set<ActivityCategoryToken>()
-            
-            for item in metadata {
-                guard let isEnabled = item["isEnabled"] as? Bool, isEnabled,
-                      let tokenData = item["token"] as? Data else { continue }
-                
-                if item["isCategory"] as? Bool == true {
-                    if let token = try? decoder.decode(ActivityCategoryToken.self, from: tokenData) { categoryTokens.insert(token) }
-                } else {
-                    if let token = try? decoder.decode(ApplicationToken.self, from: tokenData) { appTokens.insert(token) }
-                }
-            }
-            
+            let metadata = UserDefaults.standard.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
+            let jsonDecoder = JSONDecoder()
+            guard let blob = UserDefaults.standard.data(forKey: "LumisSelectionBlob"),
+                  let selection = try? jsonDecoder.decode(FamilyActivitySelection.self, from: blob) else { return false }
+            let hasEnabledApps = metadata.contains { ($0["isEnabled"] as? Bool) == true }
             let store = ManagedSettingsStore()
-            store.shield.applications = appTokens.isEmpty ? nil : appTokens
-            store.shield.applicationCategories = categoryTokens.isEmpty ? nil : .specific(categoryTokens)
+            if hasEnabledApps {
+                store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
+                store.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(Set(selection.categoryTokens))
+            } else {
+                store.shield.applications = nil
+                store.shield.applicationCategories = nil
+            }
             return true
         }
         
@@ -258,7 +128,7 @@ public class LumisScreenTimeModule: Module {
         }
         
         Function("getSelectedAppCount") { () -> Int in
-            let metadata = self.getDefaults()?.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
+            let metadata = UserDefaults.standard.array(forKey: "LumisAppMetadata") as? [[String: Any]] ?? []
             return metadata.filter { ($0["isEnabled"] as? Bool) == true }.count
         }
         
@@ -274,8 +144,29 @@ public class LumisScreenTimeModule: Module {
         }
 
         View(LumisIconView.self) {
-            Prop("iconProps") { (view: LumisIconView, props: LumisIconProps) in
-                view.update(props: props)
+            Prop("tokenData") { (view: LumisIconView, data: String?) in 
+                view.lastProps.tokenData = data 
+                view.updateFromProps()
+            }
+            Prop("appName") { (view: LumisIconView, name: String?) in 
+                view.lastProps.appName = name 
+                view.updateFromProps()
+            }
+            Prop("isCategory") { (view: LumisIconView, isCat: Bool) in 
+                view.lastProps.isCategory = isCat 
+                view.updateFromProps()
+            }
+            Prop("variant") { (view: LumisIconView, variant: String?) in 
+                view.lastProps.variant = variant ?? "icon" 
+                view.updateFromProps()
+            }
+            Prop("size") { (view: LumisIconView, size: Double?) in 
+                view.lastProps.size = size ?? 40.0 
+                view.updateFromProps()
+            }
+            Prop("grayscale") { (view: LumisIconView, grayscale: Bool?) in 
+                view.lastProps.grayscale = grayscale ?? false 
+                view.updateFromProps()
             }
         }
     }

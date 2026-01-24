@@ -8,6 +8,7 @@ import {
     isShieldActive as nativeIsShieldActive,
     getAppToggles as nativeGetAppToggles,
     toggleApp as nativeToggleApp,
+    clearMetadata as nativeClearMetadata,
     LumisIcon
 } from 'lumisscreentime';
 import { requireNativeModule } from 'expo-modules-core';
@@ -92,7 +93,7 @@ export const debugForcePermission = (): boolean => {
 export interface PickerResult {
     success: boolean;
     count: number;
-    toggles: { name: string; isEnabled: boolean; isCategory?: boolean; token?: string }[];
+    toggles: { name: string; isEnabled: boolean; isCategory?: boolean; token?: string; tokenData?: string }[];
 }
 
 export const showAppPicker = async (): Promise<PickerResult> => {
@@ -256,6 +257,15 @@ export const setAppRestrictions = async (appIds: string[]): Promise<boolean> => 
 
 export const clearAppRestrictions = async (): Promise<boolean> => {
     return deactivateShield();
+};
+
+export const clearMetadata = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeClearMetadata();
+    } catch (e) {
+        console.error('Failed to clear metadata', e);
+    }
 };
 
 export { LumisIcon };

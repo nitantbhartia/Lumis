@@ -4,14 +4,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Shield, Lock, Unlock, Instagram, Video, Twitter, Facebook, Youtube, MessageCircle, Ghost, Film, AlertCircle, Plus, Check, Search, Target, X, Zap, Clock, Brain } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
+import { useAuthStore } from '@/lib/state/auth-store';
 import * as Haptics from 'expo-haptics';
-import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp, LumisIcon } from '@/lib/screen-time';
+import { showAppPicker, activateShield, deactivateShield, getSelectedAppCount, isShieldActive, requestScreenTimeAuthorization, getScreenTimePermissionStatus, getAppToggles, toggleNativeApp, LumisIcon, clearMetadata } from '@/lib/screen-time';
 import { useFocusEffect } from 'expo-router';
 import { CoolDownModal } from '@/components/CoolDownModal';
 import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 import { ShieldPreviewRow } from '@/components/ShieldPreviewRow';
 import { BlurView } from 'expo-blur';
 import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
+import { useWeather } from '@/lib/hooks/useWeather';
+import { useMissionBriefing } from '@/lib/hooks/useMissionBriefing';
+import { formatFirstName } from '@/lib/utils/name-utils';
 
 const { width } = Dimensions.get('window');
 
@@ -19,19 +23,28 @@ const { width } = Dimensions.get('window');
 
 export default function ShieldHub() {
     const insets = useSafeAreaInsets();
-    const { blockedApps, toggleAppBlocked, dailyGoalMinutes, todayProgress } = useLumisStore();
+    const { blockedApps, dailyGoalMinutes, todayProgress, currentStreak } = useLumisStore();
     const { lux } = useSmartEnvironment();
+    const weather = useWeather();
+    const userName = useAuthStore((s) => s.userName);
 
     const [hasPermission, setHasPermission] = useState(false);
     const [isPickerLoading, setIsPickerLoading] = useState(false);
-    const [nativeAppCount, setNativeAppCount] = useState(0);
     const [shieldStatus, setShieldStatus] = useState(false);
-    const [nativeAppToggles, setNativeAppToggles] = useState<{ name: string, isEnabled: boolean, isCategory?: boolean, token?: string }[]>([]);
     const [showInstructions, setShowInstructions] = useState(false);
     const [showBreakModal, setShowBreakModal] = useState(false);
 
+    // Dynamic Goal Logic (Same as Dashboard)
+    const now = new Date();
+    const sunriseMinutes = 6 * 60 + 49;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const hoursSinceSunrise = Math.max(0, (currentMinutes - sunriseMinutes) / 60);
+
+    const mission = useMissionBriefing(weather.condition, hoursSinceSunrise, currentStreak, userName, dailyGoalMinutes);
+    const currentSessionGoal = mission.durationValue;
+
     // Filter active apps for preview
-    const activeBlockedApps = useMemo(() => nativeAppToggles.filter(a => a.isEnabled), [nativeAppToggles]);
+    const activeBlockedApps = useMemo(() => blockedApps.filter(a => a.isBlocked), [blockedApps]);
 
     useFocusEffect(
         useCallback(() => {
@@ -39,13 +52,7 @@ export default function ShieldHub() {
                 const status = await getScreenTimePermissionStatus();
                 setHasPermission(status);
                 if (status) {
-                    const count = getSelectedAppCount();
-                    setNativeAppCount(count);
                     setShieldStatus(isShieldActive());
-
-                    const toggles = getAppToggles();
-                    setNativeAppToggles(toggles);
-
                     // Sync to global store for dashboard consistency
                     useLumisStore.getState().syncWithNativeBlockedApps();
                 }
@@ -54,10 +61,11 @@ export default function ShieldHub() {
         }, [])
     );
 
-    const isGoalMet = todayProgress.lightMinutes >= dailyGoalMinutes;
+    const isGoalMet = todayProgress.lightMinutes >= currentSessionGoal;
     const isLocked = shieldStatus && !isGoalMet;
+
     const details = isLocked ? {
-        lightRemaining: Math.max(0, dailyGoalMinutes - todayProgress.lightMinutes),
+        lightRemaining: Math.max(0, currentSessionGoal - todayProgress.lightMinutes),
         statusText: "Shielding Active",
         statusColor: "#FF6B6B"
     } : {
@@ -97,13 +105,12 @@ export default function ShieldHub() {
         setIsPickerLoading(true);
         setTimeout(async () => {
             try {
+                // We no longer clear metadata here as it wipes the existing selection reference
+                // while the bridge is preparing the picker.
                 const result = await showAppPicker();
-                if (result && result.success) {
-                    setNativeAppCount(result.count);
-                    setNativeAppToggles(result.toggles);
-                    if (result.count === 0 && result.toggles.length > 0) {
-                        setNativeAppCount(result.toggles.length);
-                    }
+                console.log('[ShieldHub] Picker selection result:', JSON.stringify(result));
+
+                if (result && (result.success || result.toggles)) {
                     // Sync to global store immediately
                     useLumisStore.getState().syncWithNativeBlockedApps();
                 }
@@ -120,7 +127,7 @@ export default function ShieldHub() {
             handleRequestPermission();
             return;
         }
-        if (nativeAppCount === 0) {
+        if (blockedApps.length === 0) {
             Alert.alert("No Apps Selected", "Please select apps to shield first.");
             return;
         }
@@ -204,26 +211,27 @@ export default function ShieldHub() {
                                 </Pressable>
                             </View>
 
-                            {nativeAppToggles.length > 0 ? (
+                            {blockedApps.length > 0 ? (
                                 <View style={styles.gridContainer}>
-                                    {nativeAppToggles.map((app, index) => (
-                                        <View key={`${app.name}-${index}`} style={[styles.gridItem, isLocked && styles.gridItemLocked]}>
-                                            {app.token ? (
-                                                <LumisIcon
-                                                    style={{ width: 40, height: 40 }}
-                                                    iconProps={{
-                                                        tokenData: app.token,
-                                                        isCategory: !!app.isCategory,
-                                                        size: 40,
-                                                        grayscale: isLocked
-                                                    }}
-                                                />
-                                            ) : (
-                                                <View style={[styles.gridIcon, isLocked && styles.grayscale]}>
-                                                    <Shield size={20} color={isLocked ? "#666" : "#FFF"} />
-                                                </View>
-                                            )}
-                                            <Text style={[styles.gridName, isLocked && { color: "#666" }]} numberOfLines={1}>{app.name}</Text>
+                                    {blockedApps.map((app, index) => (
+                                        <View key={`${app.name}-${index}-${blockedApps.length}-${isLocked}`} style={[styles.gridItem, isLocked && styles.gridItemLocked]}>
+                                            <LumisIcon
+                                                style={{ width: 40, height: 40 }}
+                                                appName={app.name}
+                                                tokenData={(app as any).tokenData}
+                                                isCategory={!!app.isCategory}
+                                                size={40}
+                                                grayscale={isLocked}
+                                            />
+                                            <LumisIcon
+                                                style={{ width: '100%', height: 20, marginTop: 4 }}
+                                                appName={app.name}
+                                                tokenData={(app as any).tokenData}
+                                                isCategory={!!app.isCategory}
+                                                variant="title"
+                                                size={12}
+                                                grayscale={isLocked}
+                                            />
                                         </View>
                                     ))}
                                 </View>
@@ -309,7 +317,7 @@ export default function ShieldHub() {
                     </View>
                 </View>
             </Modal>
-        </View>
+        </View >
     );
 }
 

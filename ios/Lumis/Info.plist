@@ -57,6 +57,8 @@
     <string>Lumis uses the camera sensor to accurately measure ambient light levels and optimize your light intake.</string>
     <key>NSFaceIDUsageDescription</key>
     <string>Lumis uses FaceID to secure your app lock settings.</string>
+    <key>NSFamilyControlsUsageDescription</key>
+    <string>Lumis uses Screen Time access to help you block distracting apps during your morning light routine to ensure you stay focused.</string>
     <key>NSHealthShareUsageDescription</key>
     <string>Lumis reads your outdoor activity and steps from HealthKit to track your daily progress automatically.</string>
     <key>NSHealthUpdateUsageDescription</key>
