@@ -101,15 +101,22 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         defaults.set(ISO8601DateFormatter().string(from: Date()), forKey: "focusScoreTimestamp")
 
         // Track which category this event belongs to
-        // Event names should be prefixed with category (e.g., "productive-email", "distracting-social")
+        // For now, categorize all usage as neutral since we're tracking all apps together
+        // TODO: In the future, we can use FamilyActivitySelection to separate productive/distracting apps
+        // and create separate events for each category
         let eventName = event.rawValue.lowercased()
+
         if eventName.contains("productive") {
+            // If event name explicitly says productive (future enhancement)
             let productive = defaults.integer(forKey: "productiveSeconds")
             defaults.set(productive + 60, forKey: "productiveSeconds")
         } else if eventName.contains("distracting") {
+            // If event name explicitly says distracting (future enhancement)
             let distracting = defaults.integer(forKey: "distractingSeconds")
             defaults.set(distracting + 60, forKey: "distractingSeconds")
         } else {
+            // Default: count as neutral usage
+            // This is reasonable since we're tracking all apps together
             let neutral = defaults.integer(forKey: "neutralSeconds")
             defaults.set(neutral + 60, forKey: "neutralSeconds")
         }
@@ -130,13 +137,31 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // Calculate focus score (0-100)
         if totalSeconds > 0 {
             let focusRatio = Double(productiveSeconds) / Double(totalSeconds)
-            // Base 20 points + up to 80 points based on productivity ratio
-            let focusScore = min(100, Int(focusRatio * 100) + 20)
+            let distractingRatio = Double(distractingSeconds) / Double(totalSeconds)
+
+            // Calculate score based on time distribution:
+            // - High score (70-100): Mostly productive or neutral usage
+            // - Medium score (40-69): Mixed usage
+            // - Low score (0-39): Mostly distracting usage
+
+            var focusScore: Int
+
+            if distractingSeconds == 0 && productiveSeconds == 0 {
+                // All neutral usage - give moderate score (50)
+                focusScore = 50
+            } else {
+                // Score formula: productive adds points, distracting removes points
+                // Start at 50, productive adds up to +50, distracting removes up to -50
+                let productiveBonus = Int(focusRatio * 50)
+                let distractingPenalty = Int(distractingRatio * 50)
+                focusScore = 50 + productiveBonus - distractingPenalty
+                focusScore = max(0, min(100, focusScore))
+            }
 
             defaults.set(focusScore, forKey: "focusScore")
             defaults.set(focusRatio, forKey: "focusRatio")
 
-            print("[LumisMonitor] Focus score: \(focusScore)% (ratio: \(focusRatio))")
+            print("[LumisMonitor] Focus score: \(focusScore)% (productive: \(productiveSeconds)s, distracting: \(distractingSeconds)s, total: \(totalSeconds)s)")
         }
 
         defaults.set(ISO8601DateFormatter().string(from: Date()), forKey: "focusScoreTimestamp")

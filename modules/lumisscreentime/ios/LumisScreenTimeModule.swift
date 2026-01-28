@@ -543,8 +543,9 @@ public class LumisScreenTimeModule: Module {
 
             // Create events to track usage at regular intervals
             // The extension will be notified when these thresholds are reached
+            // Using a neutral event name so the Monitor extension categorizes by actual app usage
             let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
-                DeviceActivityEvent.Name("com.lumis.usage.distracting"): DeviceActivityEvent(
+                DeviceActivityEvent.Name("com.lumis.usage.all"): DeviceActivityEvent(
                     applications: Set(), // Empty means all apps
                     categories: Set(),
                     webDomains: Set(),
