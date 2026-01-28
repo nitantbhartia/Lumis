@@ -283,12 +283,18 @@ public class LumisScreenTimeModule: Module {
         Function("getFocusScore") { () -> [String: Any] in
             let sharedDefaults = UserDefaults(suiteName: "group.com.nitant.lumis")
 
-            let score = sharedDefaults?.integer(forKey: "focusScore") ?? 0
+            var score = sharedDefaults?.integer(forKey: "focusScore") ?? 0
             let timestamp = sharedDefaults?.string(forKey: "focusScoreTimestamp") ?? ""
             let distractingMinutes = sharedDefaults?.integer(forKey: "distractingMinutes") ?? 0
             let sunlightBonus = sharedDefaults?.bool(forKey: "sunlightBonusApplied") ?? false
             let focusRatio = sharedDefaults?.double(forKey: "focusRatio") ?? 0.0
             let penaltyDeductions = sharedDefaults?.integer(forKey: "penaltyDeductions") ?? 0
+
+            // If no score data yet, return default 50% for neutral usage
+            // iOS 18+ threshold events don't fire continuously, so initial score may be 0
+            if score == 0 && timestamp.isEmpty {
+                score = 50
+            }
 
             return [
                 "score": score,
