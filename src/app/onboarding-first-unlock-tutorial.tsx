@@ -17,7 +17,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-export default function OnboardingFirstUnlockScreen() {
+export default function OnboardingFirstUnlockTutorialScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -81,7 +81,7 @@ export default function OnboardingFirstUnlockScreen() {
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/onboarding-permission-notifications');
+    router.push('/onboarding-question-wakeup');
   };
 
   const lockStyle = useAnimatedStyle(() => ({
@@ -198,7 +198,7 @@ export default function OnboardingFirstUnlockScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: '#0F172A',
   },
   appGrid: {
     position: 'absolute',
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   dimOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 26, 46, 0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
   },
   sunGlow: {
     position: 'absolute',

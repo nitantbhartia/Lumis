@@ -28,8 +28,8 @@ export default function OnboardingPermissionLocationScreen() {
             console.log('[Location Permission] Error:', e);
         }
 
-        // Navigate to Notifications permission (skip screentime - already requested in commitment screen)
-        router.push('/onboarding-permission-notifications');
+        // Navigate to sensor calibration
+        router.push('/onboarding-sensor-calibration');
     };
 
     const handleBack = () => {

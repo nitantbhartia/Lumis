@@ -22,6 +22,7 @@ if (!NativeModule) {
 
 if (NativeModule && NativeModule.hello) {
     console.log('[LumisScreenTime] Bridge check:', NativeModule.hello());
+    console.log('[LumisScreenTime] Available functions:', Object.keys(NativeModule).filter(k => typeof NativeModule[k] === 'function'));
 } else {
     console.error('[LumisScreenTime] Bridge check failed. NativeModule is:', NativeModule);
 }

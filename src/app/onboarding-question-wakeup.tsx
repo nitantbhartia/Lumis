@@ -21,7 +21,7 @@ export default function OnboardingQuestionWakeupScreen() {
     const hours = wakeTime.getHours().toString().padStart(2, '0');
     const mins = wakeTime.getMinutes().toString().padStart(2, '0');
     setScheduledWakeTime(`${hours}:${mins}`);
-    router.push('/onboarding-success');
+    router.push('/onboarding-stakes-choice');
   };
 
   const handleTimeChange = (event: any, selectedDate?: Date) => {

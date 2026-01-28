@@ -1,29 +1,38 @@
+//
+//  TotalActivityView.swift
+//  LumisDeviceActivityReport
+//
+//  Created by nitant bhartia on 1/28/26.
+//
+
 import SwiftUI
-import DeviceActivity
 
 struct TotalActivityView: View {
-    let activityReport: ActivityReport
+    let totalActivity: String
 
     var body: some View {
-        // This view is rendered by the system when the report runs
-        // We mainly use this to trigger the data collection
-        // The actual UI is in React Native
-        VStack {
-            Text("Screen Time: \(formatDuration(activityReport.totalScreenTime))")
-                .font(.headline)
-            Text("Focus Score: \(activityReport.focusScore)%")
+        VStack(spacing: 20) {
+            Image(systemName: "chart.bar.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+
+            Text("Lumis Screen Time")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(totalActivity)
+                .font(.title3)
+                .foregroundColor(.primary)
+
+            Text("Activity data synced to main app")
                 .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
         .padding()
     }
+}
 
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let totalMinutes = Int(seconds) / 60
-        let hours = totalMinutes / 60
-        let mins = totalMinutes % 60
-        if hours > 0 {
-            return "\(hours)h \(mins)m"
-        }
-        return "\(mins)m"
-    }
+#Preview {
+    TotalActivityView(totalActivity: "1h 23m")
 }

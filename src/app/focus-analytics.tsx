@@ -33,7 +33,6 @@ import {
   startDailyMonitoring,
   isDailyMonitoringActive,
   getAppToggles,
-  refreshScreenTimeData,
   type DetailedUsageStats,
   type HourlyBreakdown,
   type AppUsageItem,
@@ -60,21 +59,19 @@ export default function FocusAnalyticsScreen() {
   const [hourlyData, setHourlyData] = useState<HourlyBreakdown[]>([]);
   const [appUsage, setAppUsage] = useState<AppUsageItem[]>([]);
 
-  // Ensure monitoring is active on mount and refresh data
+  // Ensure monitoring is active on mount
   useEffect(() => {
     const initializeScreenTime = async () => {
       // Start daily monitoring if not active
       const isActive = isDailyMonitoringActive();
+      console.log('[FocusAnalytics] Daily monitoring active:', isActive);
       if (!isActive) {
-        await startDailyMonitoring();
+        const started = await startDailyMonitoring();
+        console.log('[FocusAnalytics] Daily monitoring started:', started);
       }
 
-      // Trigger a refresh of screen time data via DeviceActivityReport
-      // This presents a hidden view that causes iOS to run the report extension
-      const refreshed = await refreshScreenTimeData();
-      console.log('[FocusAnalytics] Screen time data refreshed:', refreshed);
-
-      // Reload data after refresh completes
+      // Load data directly - the DeviceActivityMonitor extension
+      // collects data in the background continuously
       loadData();
     };
     initializeScreenTime();

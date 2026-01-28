@@ -24,12 +24,12 @@ export default function OnboardingPermissionNotificationsScreen() {
         }
 
         // Navigate to wake time schedule
-        router.push('/onboarding-question-wakeup');
+        router.push('/onboarding-permission-motion');
     };
 
     const handleSkip = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push('/onboarding-question-wakeup');
+        router.push('/onboarding-permission-motion');
     };
 
     const handleBack = () => {

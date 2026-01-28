@@ -44,18 +44,12 @@ export default function OnboardingPermissionScreenTimeScreen() {
         try {
             const result = await requestScreenTimeAuthorization();
 
-            // Check if permission was actually granted
-            if (result === true) {
-                // Permission granted - show celebration with first streak stone
-                router.push('/onboarding-first-streak');
-            } else {
-                // Permission denied - skip celebration
-                router.push('/onboarding-stakes-choice');
-            }
+            // Navigate to next permission screen
+            router.push('/onboarding-permission-notifications');
         } catch (e) {
             console.error('[Screen Time Permission] Error:', e);
-            // Still navigate even on error (skip celebration)
-            router.push('/onboarding-stakes-choice');
+            // Still navigate even on error
+            router.push('/onboarding-permission-notifications');
         } finally {
             setIsRequesting(false);
         }
@@ -64,7 +58,7 @@ export default function OnboardingPermissionScreenTimeScreen() {
     const handleDontAllow = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         // Navigate without granting permission
-        router.push('/onboarding-stakes-choice');
+        router.push('/onboarding-permission-notifications');
     };
 
     return (

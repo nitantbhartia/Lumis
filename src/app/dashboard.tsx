@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Sun, Moon, Clock, Flame, Shield, Smartphone } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
 
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
@@ -91,7 +90,6 @@ export default function DashboardScreen() {
 
   // Derived state
   const now = new Date();
-  const isNightTime = !weather.isDaylight;
   const isGoalMet = todayProgress.completed || todayProgress.lightMinutes >= GOAL_MINUTES;
 
   // Check if before scheduled wake time
@@ -259,7 +257,7 @@ export default function DashboardScreen() {
         ) : (
           // Active Challenge State - just stakes if enabled
           <>
-            {stakesEnabled && !isGoalMet && !isNightTime && (
+            {stakesEnabled && !isGoalMet && (
               <StakesCard
                 charity={selectedCharity}
                 penaltyAmount={1}
@@ -272,19 +270,17 @@ export default function DashboardScreen() {
       </View>
 
       {/* Floating CTA above tab bar */}
-      {!isNightTime && !isBeforeWake && !isGoalMet && (
+      {!isBeforeWake && !isGoalMet && (
         <View style={styles.floatingCtaContainer}>
           <Pressable onPress={handleStartTracking} style={styles.floatingStartButton}>
-            <BlurView intensity={60} tint="dark" style={styles.floatingButtonBlur}>
-              <Sun size={20} color="#FF6B35" strokeWidth={2.5} />
-              <Text style={styles.floatingStartButtonText}>START MORNING LIGHT</Text>
-            </BlurView>
+            <Sun size={20} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={styles.floatingStartButtonText}>START MORNING LIGHT</Text>
           </Pressable>
         </View>
       )}
 
       {/* Completion state */}
-      {!isNightTime && !isBeforeWake && isGoalMet && (
+      {!isBeforeWake && isGoalMet && (
         <View style={styles.floatingCtaContainer}>
           <CompletionActions
             onViewActivity={() => router.push('/activity-summary')}
@@ -476,8 +472,19 @@ const styles = StyleSheet.create({
     right: 20,
   },
   floatingStartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF6B35',
     borderRadius: 20,
-    overflow: 'hidden',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    gap: 12,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   floatingButtonBlur: {
     flexDirection: 'row',
@@ -490,7 +497,7 @@ const styles = StyleSheet.create({
   floatingStartButtonText: {
     fontSize: 15,
     fontFamily: 'Outfit_700Bold',
-    color: '#FF6B35',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   // Horizontal stats bar

@@ -102,7 +102,7 @@ export default function OnboardingSensorCalibrationScreen() {
 
     // Navigate after delay
     setTimeout(() => {
-      router.push('/onboarding-app-selection');
+      router.push('/onboarding-first-unlock-tutorial');
     }, 1500);
   };
 
@@ -116,7 +116,7 @@ export default function OnboardingSensorCalibrationScreen() {
       isCalibrated: false,
     });
 
-    router.push('/onboarding-app-selection');
+    router.push('/onboarding-first-unlock-tutorial');
   };
 
   const luxStyle = useAnimatedStyle(() => ({

@@ -33,12 +33,18 @@ export default function OnboardingStakesChoiceScreen() {
     setStakesEnabled(selectedMode === 'stakes');
 
     // If stakes enabled, go to charity selection
-    // Otherwise, skip to first unlock experience
+    // Otherwise, skip to success
     if (selectedMode === 'stakes') {
       router.push('/onboarding-charity-selection');
     } else {
-      router.push('/onboarding-first-unlock');
+      router.push('/onboarding-success');
     }
+  };
+
+  const handleSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStakesEnabled(false);
+    router.push('/onboarding-success');
   };
 
   return (
@@ -138,6 +144,10 @@ export default function OnboardingStakesChoiceScreen() {
             Continue
           </Text>
         </Pressable>
+
+        <Pressable onPress={handleSkip} style={styles.skipButton}>
+          <Text style={styles.skipButtonText}>Skip for now</Text>
+        </Pressable>
       </Animated.View>
     </View>
   );
@@ -146,7 +156,7 @@ export default function OnboardingStakesChoiceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: '#0F172A',
   },
   content: {
     flex: 1,
@@ -300,5 +310,14 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: 'rgba(255, 255, 255, 0.3)',
+  },
+  skipButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_500Medium',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
 });

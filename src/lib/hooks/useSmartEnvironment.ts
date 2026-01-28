@@ -4,6 +4,8 @@ import { Pedometer } from 'expo-sensors';
 import LuxSensor from 'expo-lux-sensor';
 import * as Location from 'expo-location';
 import { useLumisStore } from '../state/lumis-store';
+import { analyzeLuxPattern } from '../utils/lux-pattern-analyzer';
+import { validateSolarLux } from '../utils/solar-calculator';
 
 export type EnvironmentStatus = 'IDLE' | 'OUTDOORS' | 'IN_POCKET' | 'INDOORS' | 'NIGHT';
 
@@ -13,6 +15,10 @@ export interface SmartEnvironment {
     steps: number;
     isMoving: boolean;
     creditRate: number; // 0.0 to 1.0
+    // Anti-cheat signals
+    solarConfidence?: number; // 0-100% match with solar position
+    luxPatternConfidence?: number; // 0-100% natural pattern
+    outdoorConfidenceScore?: number; // 0-100% combined confidence
 }
 
 export function useSmartEnvironment() {
@@ -23,8 +29,15 @@ export function useSmartEnvironment() {
     const [isMoving, setIsMoving] = useState(false);
     const [creditRate, setCreditRate] = useState(0);
 
+    // Anti-cheat state
+    const [solarConfidence, setSolarConfidence] = useState<number>(50);
+    const [luxPatternConfidence, setLuxPatternConfidence] = useState<number>(50);
+    const [outdoorConfidenceScore, setOutdoorConfidenceScore] = useState<number>(50);
+    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
     const lastStepsRef = useRef(0);
     const consecutiveLowLuxMoving = useRef(0);
+    const luxHistoryRef = useRef<number[]>([]);
 
     useEffect(() => {
         let luxSub: any;
@@ -73,6 +86,12 @@ export function useSmartEnvironment() {
                     const currentLux = Math.max(0, Math.round(Number(rawValue) || 0));
                     console.log('[Lux Sensor] Raw:', data, 'Parsed:', currentLux);
                     setLux(currentLux);
+
+                    // Maintain lux history for pattern analysis (last 30 readings)
+                    luxHistoryRef.current.push(currentLux);
+                    if (luxHistoryRef.current.length > 30) {
+                        luxHistoryRef.current.shift();
+                    }
                 });
             } else if (isWeb) {
                 // Simulation for web/demo
@@ -111,13 +130,32 @@ export function useSmartEnvironment() {
                 return () => clearInterval(moveSim);
             }
 
-            // 4. Location (Final Boss Validation)
+            // 4. Location (Final Boss Validation + Solar Calculation)
             if (locPerm === 'granted') {
+                // Get initial location for solar calculations
+                try {
+                    const initialLocation = await Location.getCurrentPositionAsync({
+                        accuracy: Location.Accuracy.Balanced
+                    });
+                    setUserLocation({
+                        latitude: initialLocation.coords.latitude,
+                        longitude: initialLocation.coords.longitude
+                    });
+                } catch (e) {
+                    console.log('[useSmartEnvironment] Error getting location:', e);
+                }
+
                 locationSub = await Location.watchPositionAsync(
                     { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
                     (location) => {
                         const speed = location.coords.speed || 0;
                         if (speed > 0.5) setIsMoving(true);
+
+                        // Update location for solar calculations
+                        setUserLocation({
+                            latitude: location.coords.latitude,
+                            longitude: location.coords.longitude
+                        });
                     }
                 );
             }
@@ -136,6 +174,43 @@ export function useSmartEnvironment() {
             }
         };
     }, []);
+
+    // Calculate anti-cheat confidence scores
+    useEffect(() => {
+        // Only calculate if we have sufficient data
+        if (luxHistoryRef.current.length < 5) return;
+
+        // 1. Lux Pattern Analysis
+        const pattern = analyzeLuxPattern(luxHistoryRef.current);
+        setLuxPatternConfidence(pattern.confidence);
+
+        // 2. Solar Position Validation (if location available)
+        if (userLocation) {
+            // We'll get cloud cover and UV from weather API in tracking screen
+            // For now, use default values
+            const solarConf = validateSolarLux(
+                lux,
+                userLocation.latitude,
+                userLocation.longitude,
+                new Date(),
+                0, // cloudCover (TODO: get from weather API)
+                0  // uvIndex (TODO: get from weather API)
+            );
+            setSolarConfidence(solarConf);
+        }
+
+        // 3. Calculate combined outdoor confidence score
+        // Weights: Solar (40%), Pattern (25%), Movement (20%), UV (10%), Temp (5%)
+        // For now, we'll use Solar + Pattern + Movement (75% total, normalized to 100%)
+        const movementConf = isMoving ? 80 : 40; // Moving outdoors = more confident
+        const combinedScore = (
+            (solarConfidence * 0.53) + // 40/75 = 53%
+            (pattern.confidence * 0.33) + // 25/75 = 33%
+            (movementConf * 0.27) // 20/75 = 27%
+        );
+        setOutdoorConfidenceScore(Math.round(combinedScore));
+
+    }, [lux, userLocation, isMoving]);
 
     // State Machine Logic
     useEffect(() => {
@@ -186,5 +261,14 @@ export function useSmartEnvironment() {
         evaluateStatus();
     }, [lux, isMoving, calibration]);
 
-    return { status, lux, steps, isMoving, creditRate };
+    return {
+        status,
+        lux,
+        steps,
+        isMoving,
+        creditRate,
+        solarConfidence,
+        luxPatternConfidence,
+        outdoorConfidenceScore
+    };
 }

@@ -20,6 +20,7 @@ import {
   Trophy,
   Heart,
   Crown,
+  Target,
 } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
@@ -54,6 +55,8 @@ export default function SettingsScreen() {
   const setNotificationPreferences = useLumisStore((s) => s.setNotificationPreferences);
   const weatherAdaptiveGoalsEnabled = useLumisStore((s) => s.weatherAdaptiveGoalsEnabled);
   const setWeatherAdaptiveGoalsEnabled = useLumisStore((s) => s.setWeatherAdaptiveGoalsEnabled);
+  const stakesEnabled = useLumisStore((s) => s.stakesEnabled);
+  const selectedCharity = useLumisStore((s) => s.selectedCharity);
 
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -102,6 +105,11 @@ export default function SettingsScreen() {
   const handleAchievements = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/achievements');
+  };
+
+  const handleManageStakes = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/onboarding-stakes-choice');
   };
 
   const handleHealthSync = () => {
@@ -231,6 +239,21 @@ export default function SettingsScreen() {
                   </View>
                 </View>
                 <ChevronRight size={20} color="#FFB347" />
+              </View>
+            </GlassCard>
+
+            <GlassCard variant="default" onPress={handleManageStakes}>
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-4">
+                  <Target size={22} color="#FF6B35" />
+                  <View>
+                    <Text className="text-lumis-dawn text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>Financial Stakes</Text>
+                    <Text className="text-lumis-sunrise/40 text-sm">
+                      {stakesEnabled ? `Enabled - $1 to ${selectedCharity || 'charity'}` : 'Add stakes for extra motivation'}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color="#FF6B35" />
               </View>
             </GlassCard>
           </Animated.View>

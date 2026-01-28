@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -28,17 +27,18 @@ export default function OnboardingCharitySelectionScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedCharity(charity);
 
-    // Proceed to first unlock experience
-    router.push('/onboarding-first-unlock');
+    // Proceed to success
+    router.push('/onboarding-success');
+  };
+
+  const handleSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedCharity(null);
+    router.push('/onboarding-success');
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <LinearGradient
-        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
-        locations={[0, 0.3, 0.7, 1]}
-        style={StyleSheet.absoluteFill}
-      />
 
       <ScrollView
         style={styles.scrollView}
@@ -84,6 +84,10 @@ export default function OnboardingCharitySelectionScreen() {
             Continue
           </Text>
         </Pressable>
+
+        <Pressable onPress={handleSkip} style={styles.skipButton}>
+          <Text style={styles.skipButtonText}>Choose later</Text>
+        </Pressable>
       </Animated.View>
     </View>
   );
@@ -92,6 +96,7 @@ export default function OnboardingCharitySelectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0F172A',
   },
   scrollView: {
     flex: 1,
@@ -107,36 +112,34 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontFamily: 'Outfit_700Bold',
-    color: '#1A1F36',
+    color: '#FFFFFF',
     letterSpacing: -1,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     fontFamily: 'Outfit_400Regular',
-    color: '#4A5568',
+    color: 'rgba(255, 255, 255, 0.6)',
     lineHeight: 24,
   },
   infoCard: {
-    backgroundColor: 'rgba(255, 217, 61, 0.2)',
+    backgroundColor: 'rgba(255, 217, 61, 0.1)',
     borderRadius: 12,
     padding: 16,
     marginTop: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 217, 61, 0.4)',
+    borderColor: 'rgba(255, 217, 61, 0.2)',
   },
   infoText: {
     fontSize: 14,
     fontFamily: 'Outfit_500Medium',
-    color: '#1A1F36',
+    color: '#FFD93D',
     textAlign: 'center',
   },
   buttonContainer: {
     paddingHorizontal: 32,
     paddingTop: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(26, 31, 54, 0.1)',
+    backgroundColor: '#0F172A',
   },
   button: {
     backgroundColor: '#FF6B35',
@@ -151,7 +154,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: '#E1E8ED',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     shadowOpacity: 0,
   },
   buttonPressed: {
@@ -165,6 +168,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   buttonTextDisabled: {
-    color: '#A0AEC0',
+    color: 'rgba(255, 255, 255, 0.3)',
+  },
+  skipButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_500Medium',
+    color: 'rgba(255, 255, 255, 0.5)',
   },
 });
