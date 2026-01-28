@@ -133,6 +133,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         let totalSeconds = defaults.integer(forKey: "totalScreenTimeSeconds")
         let productiveSeconds = defaults.integer(forKey: "productiveSeconds")
+        let distractingSeconds = defaults.integer(forKey: "distractingSeconds")
 
         // Calculate focus score (0-100)
         if totalSeconds > 0 {
