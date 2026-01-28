@@ -1,227 +1,510 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   TrendingUp,
   TrendingDown,
-  Zap,
+  Sun,
   Calendar,
   Target,
-  Award,
-  ChevronRight,
+  Flame,
   ArrowLeft,
-  Shield,
   Clock,
+  Minus,
 } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { calculateInsights, generateMonthlyReport } from '@/lib/insights';
-import { GlassCard } from '@/components/GlassCard';
-import { FadeInDown } from 'react-native-reanimated';
+import { useWeather } from '@/lib/hooks/useWeather';
 
 export default function InsightsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const weather = useWeather();
   const progressHistory = useLumisStore((s) => s.progressHistory);
   const isPremium = useLumisStore((s) => s.isPremium);
   const isTrialActive = useLumisStore((s) => s.isTrialActive());
   const hasPremiumAccess = isPremium || isTrialActive;
 
+  const isDarkMode = !weather.isDaylight;
+  const backgroundColor = isDarkMode ? '#1A1A2E' : '#FFF9F0';
+
   // Calculate insights
-  const insights = useMemo(() => calculateInsights(progressHistory), [progressHistory, hasPremiumAccess]);
+  const insights = useMemo(
+    () => calculateInsights(progressHistory),
+    [progressHistory]
+  );
 
   // Generate current month report
   const now = new Date();
   const monthlyReport = useMemo(
     () => generateMonthlyReport(progressHistory, now.getMonth(), now.getFullYear()),
-    [progressHistory, hasPremiumAccess]
+    [progressHistory]
   );
 
-  const TrendIcon = insights.trend === 'improving' ? TrendingUp : TrendingDown;
-  const trendColor = insights.trend === 'improving' ? '#4CAF50' : insights.trend === 'declining' ? '#F44336' : '#FFC107';
+  const getTrendIcon = () => {
+    if (insights.trend === 'improving') return TrendingUp;
+    if (insights.trend === 'declining') return TrendingDown;
+    return Minus;
+  };
+
+  const getTrendColor = () => {
+    if (insights.trend === 'improving') return '#22C55E';
+    if (insights.trend === 'declining') return '#EF4444';
+    return '#F59E0B';
+  };
+
+  const getTrendMessage = () => {
+    if (insights.trend === 'improving') {
+      return "You're getting better! Your morning routine is becoming a habit.";
+    }
+    if (insights.trend === 'declining') {
+      return "Your consistency has dipped. Try to get outside a bit earlier tomorrow.";
+    }
+    return "You're staying steady. Keep up the good work!";
+  };
+
+  const TrendIcon = getTrendIcon();
+  const trendColor = getTrendColor();
 
   return (
-    <View className="flex-1 bg-lumis-midnight">
-      <LinearGradient colors={['#1A1A2E', '#16213E']} style={{ flex: 1 }}>
-        <View
-          className="flex-row items-center justify-between px-6 pb-4"
-          style={{ paddingTop: insets.top + 16 }}
-        >
-          <Pressable onPress={() => router.back()} className="w-12 h-12 rounded-2xl bg-white/5 items-center justify-center border border-white/10">
-            <ArrowLeft size={20} color="#FFF8E7" />
+    <View style={[styles.container, { backgroundColor }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={hasPremiumAccess}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={[styles.backButton, isDarkMode && styles.backButtonDark]}
+          >
+            <ArrowLeft size={20} color={isDarkMode ? '#FFFFFF' : '#1A1A2E'} />
           </Pressable>
-          <Text className="text-2xl text-lumis-dawn" style={{ fontFamily: 'Syne_800ExtraBold' }}>
-            INSIGHTS
+          <Text style={[styles.title, isDarkMode && styles.textLight]}>
+            Your Progress
           </Text>
-          <View className="w-12" />
+          <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4 pt-4" scrollEnabled={hasPremiumAccess}>
-          <View style={{ opacity: hasPremiumAccess ? 1 : 0.3, filter: hasPremiumAccess ? 'none' : 'blur(4px)' }}>
-            {/* Trend Overview */}
-            <Animated.View entering={FadeIn.delay(100)}>
-              <GlassCard variant="hero" className="mb-lg" glow glowColor={trendColor}>
-                <View className="flex-row items-center justify-between mb-md">
-                  <Text className="text-lumis-dawn text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>
-                    Overall Trend
-                  </Text>
-                  <View
-                    className="flex-row items-center gap-2 px-3 py-1.5 rounded-full"
-                    style={{ backgroundColor: `${trendColor}30` }}
-                  >
-                    <TrendIcon size={14} color={trendColor} strokeWidth={2.5} />
-                    <Text className="text-xs uppercase tracking-wider" style={{ color: trendColor, fontFamily: 'Outfit_700Bold' }}>
-                      {insights.trend}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-lumis-sunrise/70 text-base leading-relaxed" style={{ fontFamily: 'Outfit_400Regular' }}>
-                  {insights.trend === 'improving'
-                    ? "Your morning discipline is sharpening. You've increased light exposure by 12% this week."
-                    : insights.trend === 'declining'
-                      ? 'Your consistency is dipping. Try waking 10 minutes earlier to catch the gold hour.'
-                      : 'You are maintaining a steady rhythm. Consider increasing your goal by 5 minutes.'}
+        <View style={{ opacity: hasPremiumAccess ? 1 : 0.3 }}>
+          {/* Trend Card */}
+          <View style={[styles.trendCard, isDarkMode && styles.cardDark]}>
+            <View style={styles.trendHeader}>
+              <Text style={[styles.trendLabel, isDarkMode && styles.textSecondaryLight]}>
+                Your Trend
+              </Text>
+              <View style={[styles.trendBadge, { backgroundColor: `${trendColor}20` }]}>
+                <TrendIcon size={14} color={trendColor} strokeWidth={2.5} />
+                <Text style={[styles.trendBadgeText, { color: trendColor }]}>
+                  {insights.trend === 'improving' ? 'Improving' : insights.trend === 'declining' ? 'Needs Work' : 'Steady'}
                 </Text>
-              </GlassCard>
-            </Animated.View>
-
-            {/* Key Metrics */}
-            <Animated.View entering={FadeInDown.delay(200).springify()}>
-              <Text className="text-lumis-sunrise/40 text-[10px] uppercase tracking-[3px] mb-md px-1" style={{ fontFamily: 'Outfit_700Bold' }}>
-                THIS MONTH
-              </Text>
-              <View className="gap-4 mb-lg">
-                <View className="flex-row gap-4">
-                  <View className="flex-1">
-                    <GlassCard variant="default">
-                      <View className="flex-row items-center gap-2 mb-2">
-                        <Zap size={16} color="#FFB347" />
-                        <Text className="text-lumis-sunrise/60 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_600SemiBold' }}>Light Earned</Text>
-                      </View>
-                      <Text className="text-3xl text-lumis-dawn" style={{ fontFamily: 'Syne_700Bold' }}>{monthlyReport.totalMinutes}</Text>
-                    </GlassCard>
-                  </View>
-                  <View className="flex-1">
-                    <GlassCard variant="default">
-                      <View className="flex-row items-center gap-2 mb-2">
-                        <Target size={16} color="#8B5CF6" />
-                        <Text className="text-lumis-sunrise/60 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_600SemiBold' }}>Avg Daily</Text>
-                      </View>
-                      <Text className="text-3xl text-lumis-dawn" style={{ fontFamily: 'Syne_700Bold' }}>
-                        {monthlyReport.daysActive > 0 ? Math.round(monthlyReport.totalMinutes / monthlyReport.daysActive) : 0}
-                      </Text>
-                    </GlassCard>
-                  </View>
-                </View>
-
-                <View className="flex-row gap-4">
-                  <View className="flex-1">
-                    <GlassCard variant="default">
-                      <View className="flex-row items-center gap-2 mb-2">
-                        <TrendingUp size={16} color="#22C55E" />
-                        <Text className="text-lumis-sunrise/60 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_600SemiBold' }}>Score</Text>
-                      </View>
-                      <Text className="text-3xl text-lumis-dawn" style={{ fontFamily: 'Syne_700Bold' }}>{monthlyReport.consistencyScore}%</Text>
-                    </GlassCard>
-                  </View>
-                  <View className="flex-1">
-                    <GlassCard variant="default">
-                      <View className="flex-row items-center gap-2 mb-2">
-                        <Award size={16} color="#FF6B35" />
-                        <Text className="text-lumis-sunrise/60 text-[10px] uppercase tracking-wider" style={{ fontFamily: 'Outfit_600SemiBold' }}>Best Week</Text>
-                      </View>
-                      <Text className="text-3xl text-lumis-dawn" style={{ fontFamily: 'Syne_700Bold' }}>{monthlyReport.bestWeek}</Text>
-                    </GlassCard>
-                  </View>
-                </View>
               </View>
-            </Animated.View>
-
-            {/* Streak & All-Time Stats */}
-            <Animated.View entering={FadeIn.delay(300)}>
-              <Text className="text-lumis-sunrise/60 text-xs font-semibold mb-3 px-1" style={{ fontFamily: 'Outfit_600SemiBold' }}>
-                ALL-TIME
-              </Text>
-              <View className="gap-3 mb-6">
-                <View className="flex-row gap-3">
-                  <View className="flex-1 bg-lumis-twilight/60 rounded-xl p-4">
-                    <Text className="text-lumis-sunrise/60 text-xs mb-2" style={{ fontFamily: 'Outfit_400Regular' }}>
-                      Current Streak
-                    </Text>
-                    <Text className="text-lumis-dawn text-2xl font-bold" style={{ fontFamily: 'Outfit_700Bold' }}>
-                      {insights.currentStreak}
-                    </Text>
-                    <Text className="text-lumis-sunrise/40 text-xs mt-1" style={{ fontFamily: 'Outfit_400Regular' }}>
-                      days
-                    </Text>
-                  </View>
-
-                  <View className="flex-1 bg-lumis-twilight/60 rounded-xl p-4">
-                    <Text className="text-lumis-sunrise/60 text-xs mb-2" style={{ fontFamily: 'Outfit_400Regular' }}>
-                      Best Streak
-                    </Text>
-                    <Text className="text-lumis-dawn text-2xl font-bold" style={{ fontFamily: 'Outfit_700Bold' }}>
-                      {insights.longestStreak}
-                    </Text>
-                    <Text className="text-lumis-sunrise/40 text-xs mt-1" style={{ fontFamily: 'Outfit_400Regular' }}>
-                      days
-                    </Text>
-                  </View>
-
-                  <View className="flex-1 bg-lumis-twilight/60 rounded-xl p-4">
-                    <Text className="text-lumis-sunrise/60 text-xs mb-2" style={{ fontFamily: 'Outfit_400Regular' }}>
-                      Total Time
-                    </Text>
-                    <Text className="text-lumis-dawn text-2xl font-bold" style={{ fontFamily: 'Outfit_700Bold' }}>
-                      {Math.round(insights.totalMinutes / 60)}
-                    </Text>
-                    <Text className="text-lumis-sunrise/40 text-xs mt-1" style={{ fontFamily: 'Outfit_400Regular' }}>
-                      hours
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
+            </View>
+            <Text style={[styles.trendMessage, isDarkMode && styles.textSecondaryLight]}>
+              {getTrendMessage()}
+            </Text>
           </View>
-        </ScrollView>
 
-        {/* Paywall Overlay */}
-        {!hasPremiumAccess && (
-          <View className="absolute inset-0 items-center justify-center z-20">
-            <View className="bg-lumis-twilight/90 p-8 rounded-3xl items-center border border-lumis-golden/30 mx-8">
-              <View className="w-16 h-16 rounded-full bg-lumis-golden/20 items-center justify-center mb-4">
-                <Target size={32} color="#FFB347" />
+          {/* This Month Stats */}
+          <Text style={[styles.sectionTitle, isDarkMode && styles.textSecondaryLight]}>
+            THIS MONTH
+          </Text>
+
+          <View style={styles.statsGrid}>
+            <View style={[styles.statCard, isDarkMode && styles.cardDark]}>
+              <View style={styles.statIconContainer}>
+                <Sun size={18} color="#FF6B35" strokeWidth={2} />
               </View>
-              <Text className="text-lumis-dawn text-xl font-bold mb-2 text-center" style={{ fontFamily: 'Outfit_700Bold' }}>
-                Unlock Your Full Potential
+              <Text style={[styles.statValue, isDarkMode && styles.textLight]}>
+                {monthlyReport.totalMinutes}
               </Text>
-              <Text className="text-lumis-sunrise/70 text-center mb-6" style={{ fontFamily: 'Outfit_400Regular' }}>
-                See advanced trends, best days, and detailed analytics with Lumis Pro.
+              <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryLight]}>
+                minutes outside
               </Text>
+            </View>
 
-              <Pressable onPress={() => router.push('/premium')} className="w-full">
-                <LinearGradient
-                  colors={['#FFB347', '#FF8C00', '#FF6B35']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    paddingVertical: 14,
-                    paddingHorizontal: 24,
-                    borderRadius: 12,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text className="text-lumis-night font-bold text-lg" style={{ fontFamily: 'Outfit_700Bold' }}>
-                    Unlock Statistics
-                  </Text>
-                </LinearGradient>
-              </Pressable>
+            <View style={[styles.statCard, isDarkMode && styles.cardDark]}>
+              <View style={styles.statIconContainer}>
+                <Target size={18} color="#8B5CF6" strokeWidth={2} />
+              </View>
+              <Text style={[styles.statValue, isDarkMode && styles.textLight]}>
+                {monthlyReport.daysActive > 0
+                  ? Math.round(monthlyReport.totalMinutes / monthlyReport.daysActive)
+                  : 0}
+              </Text>
+              <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryLight]}>
+                avg per day
+              </Text>
+            </View>
+
+            <View style={[styles.statCard, isDarkMode && styles.cardDark]}>
+              <View style={styles.statIconContainer}>
+                <Calendar size={18} color="#22C55E" strokeWidth={2} />
+              </View>
+              <Text style={[styles.statValue, isDarkMode && styles.textLight]}>
+                {monthlyReport.consistencyScore}%
+              </Text>
+              <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryLight]}>
+                consistency
+              </Text>
+            </View>
+
+            <View style={[styles.statCard, isDarkMode && styles.cardDark]}>
+              <View style={styles.statIconContainer}>
+                <Clock size={18} color="#F59E0B" strokeWidth={2} />
+              </View>
+              <Text style={[styles.statValue, isDarkMode && styles.textLight]}>
+                {monthlyReport.daysActive}
+              </Text>
+              <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryLight]}>
+                days active
+              </Text>
             </View>
           </View>
-        )}
-      </LinearGradient>
+
+          {/* All Time Stats */}
+          <Text style={[styles.sectionTitle, isDarkMode && styles.textSecondaryLight]}>
+            ALL TIME
+          </Text>
+
+          <View style={styles.allTimeRow}>
+            <View style={[styles.allTimeCard, isDarkMode && styles.cardDark]}>
+              <Flame size={20} color="#FF6B35" strokeWidth={2} fill="#FF6B35" />
+              <Text style={[styles.allTimeValue, isDarkMode && styles.textLight]}>
+                {insights.currentStreak}
+              </Text>
+              <Text style={[styles.allTimeLabel, isDarkMode && styles.textSecondaryLight]}>
+                current streak
+              </Text>
+            </View>
+
+            <View style={[styles.allTimeCard, isDarkMode && styles.cardDark]}>
+              <Flame size={20} color="#F59E0B" strokeWidth={2} />
+              <Text style={[styles.allTimeValue, isDarkMode && styles.textLight]}>
+                {insights.longestStreak}
+              </Text>
+              <Text style={[styles.allTimeLabel, isDarkMode && styles.textSecondaryLight]}>
+                best streak
+              </Text>
+            </View>
+
+            <View style={[styles.allTimeCard, isDarkMode && styles.cardDark]}>
+              <Sun size={20} color="#22C55E" strokeWidth={2} />
+              <Text style={[styles.allTimeValue, isDarkMode && styles.textLight]}>
+                {Math.round(insights.totalMinutes / 60)}h
+              </Text>
+              <Text style={[styles.allTimeLabel, isDarkMode && styles.textSecondaryLight]}>
+                total time
+              </Text>
+            </View>
+          </View>
+
+          {/* Best Day */}
+          {insights.bestDay.minutes > 0 && (
+            <View style={[styles.bestDayCard, isDarkMode && styles.cardDark]}>
+              <Text style={[styles.bestDayLabel, isDarkMode && styles.textSecondaryLight]}>
+                Your best day was
+              </Text>
+              <Text style={[styles.bestDayValue, isDarkMode && styles.textLight]}>
+                {insights.bestDay.dayOfWeek}
+              </Text>
+              <Text style={[styles.bestDayMinutes, isDarkMode && styles.textSecondaryLight]}>
+                {insights.bestDay.minutes} minutes of morning light
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Premium Paywall */}
+      {!hasPremiumAccess && (
+        <View style={styles.paywallOverlay}>
+          <View style={[styles.paywallCard, isDarkMode && styles.paywallCardDark]}>
+            <View style={styles.paywallIconContainer}>
+              <Target size={32} color="#FF6B35" />
+            </View>
+            <Text style={[styles.paywallTitle, isDarkMode && styles.textLight]}>
+              See Your Full Progress
+            </Text>
+            <Text style={[styles.paywallSubtitle, isDarkMode && styles.textSecondaryLight]}>
+              Track trends, streaks, and daily stats with Lumis Pro.
+            </Text>
+            <Pressable
+              onPress={() => router.push('/premium')}
+              style={styles.paywallButton}
+            >
+              <Text style={styles.paywallButtonText}>UNLOCK INSIGHTS</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  backButtonDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  title: {
+    fontSize: 20,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+  },
+  placeholder: {
+    width: 44,
+  },
+  textLight: {
+    color: '#FFFFFF',
+  },
+  textSecondaryLight: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  trendCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    shadowOpacity: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  trendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  trendLabel: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#666',
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  trendBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    textTransform: 'capitalize',
+  },
+  trendMessage: {
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+    lineHeight: 22,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    color: '#999',
+    letterSpacing: 2,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    width: '47%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 28,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+  },
+  allTimeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  allTimeCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  allTimeValue: {
+    fontSize: 24,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  allTimeLabel: {
+    fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+    textAlign: 'center',
+  },
+  bestDayCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  bestDayLabel: {
+    fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+    marginBottom: 4,
+  },
+  bestDayValue: {
+    fontSize: 24,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+    marginBottom: 4,
+  },
+  bestDayMinutes: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+  },
+  paywallOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 32,
+  },
+  paywallCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  paywallCardDark: {
+    backgroundColor: '#1A1A2E',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  paywallIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 107, 53, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  paywallTitle: {
+    fontSize: 22,
+    fontFamily: 'Outfit_700Bold',
+    color: '#1A1A2E',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  paywallSubtitle: {
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  paywallButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  paywallButtonText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+});

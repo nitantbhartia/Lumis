@@ -32,7 +32,8 @@ import {
   updateLiveActivity,
   endLiveActivity,
   areLiveActivitiesEnabled,
-  syncShieldDisplayData
+  syncShieldDisplayData,
+  markLuxDetected,
 } from '@/lib/screen-time';
 import { useSmartEnvironment } from '@/lib/hooks/useSmartEnvironment';
 import { CoolDownModal } from '@/components/CoolDownModal';
@@ -45,14 +46,14 @@ const STROKE_WIDTH = 12;
 const RADIUS = (TIMER_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-// Science Ticker Messages
+// Habit Accountability Messages
 const TICKER_MESSAGES = [
-  "Anchoring morning cortisol...",
-  "Calibrating circadian clock...",
-  "Clearing sleep adenosine...",
-  "Generating serenity...",
-  "Boosting serotonin levels...",
-  "Aligning biological rhythm..."
+  "Actually going outside...",
+  "Breaking the scroll addiction...",
+  "Earning your screen time...",
+  "Don't break the chain...",
+  "Future you will thank you...",
+  "Building the habit..."
 ];
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -292,6 +293,13 @@ export default function TrackingScreen() {
   const lowLuxStartTime = useRef<number | null>(null);
   const LUX_THRESHOLD = 500;
   const GRACE_PERIOD_MS = 15000;
+
+  // Focus Score: Track outdoor lux seconds for sunlight bonus
+  const OUTDOOR_LUX_THRESHOLD = 1000;
+  const OUTDOOR_LUX_SECONDS_REQUIRED = 120;
+  const outdoorLuxSecondsToday = useLumisStore((s) => s.outdoorLuxSecondsToday);
+  const incrementOutdoorLuxSeconds = useLumisStore((s) => s.incrementOutdoorLuxSeconds);
+  const hasMarkedLuxDetected = useRef(false);
   const [sessionCoordinates, setSessionCoordinates] = useState<{ latitude: number, longitude: number, timestamp: number }[]>([]);
   const accumulatedMinutesRef = useRef(todayProgress.lightMinutes);
 
@@ -309,7 +317,7 @@ export default function TrackingScreen() {
   // So: remaining = effectiveGoal - totalMinutes.
 
   const remainingMinutes = Math.max(0, effectiveGoal - totalMinutes);
-  const remainingSeconds = Math.max(0, (remainingMinutes * 60));
+  const remainingSeconds = Math.max(0, Math.round(remainingMinutes * 60));
 
   const progress = Math.min(1, sessionMinutes / Math.max(1, effectiveGoal - accumulatedMinutesRef.current));
   const dailyProgress = Math.min(1, totalMinutes / effectiveGoal);
@@ -383,6 +391,24 @@ export default function TrackingScreen() {
       }
     }
   }, [lux, isGoalReached, isIndoors]);
+
+  // Focus Score: Track outdoor lux accumulation for sunlight bonus
+  useEffect(() => {
+    if (isGoalReached) return;
+
+    // Only track if above outdoor lux threshold
+    if (lux >= OUTDOOR_LUX_THRESHOLD) {
+      incrementOutdoorLuxSeconds();
+
+      // Check if we've hit the threshold for sunlight bonus
+      const newTotal = outdoorLuxSecondsToday + 1;
+      if (newTotal >= OUTDOOR_LUX_SECONDS_REQUIRED && !hasMarkedLuxDetected.current) {
+        hasMarkedLuxDetected.current = true;
+        markLuxDetected();
+        console.log('[Tracking] Sunlight bonus threshold (120s outdoor lux) achieved!');
+      }
+    }
+  }, [lux, isGoalReached, sessionSeconds]); // Runs each second via sessionSeconds change
 
   // Timer Tick - apply credit rate for indoor penalty
   useEffect(() => {
@@ -493,8 +519,9 @@ export default function TrackingScreen() {
       incrementStreak();
       addToHistory(completedProgress);
 
+      // Navigate back to dashboard to show completion state
       setTimeout(() => {
-        router.replace('/victory');
+        router.back();
       }, 500);
     }
   }, [isGoalReached]);

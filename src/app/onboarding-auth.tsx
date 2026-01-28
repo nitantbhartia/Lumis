@@ -16,13 +16,13 @@ const SunBurstIcon = () => (
         <Path
           key={i}
           d="M0 -35 L0 -45"
-          stroke="#1A1A2E"
+          stroke="#FFFFFF"
           strokeWidth="1.5"
           strokeLinecap="round"
           transform={`rotate(${(i * 360) / 16})`}
         />
       ))}
-      <Circle cx="0" cy="0" r="10" fill="none" stroke="#1A1A2E" strokeWidth="1.5" />
+      <Circle cx="0" cy="0" r="10" fill="none" stroke="#FFFFFF" strokeWidth="1.5" />
     </G>
   </Svg>
 );
@@ -84,12 +84,7 @@ export default function OnboardingAuthScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <LinearGradient
-        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
-        locations={[0, 0.3, 0.7, 1]}
-        style={{ flex: 1 }}
-      >
+    <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
         <View
           style={{
             flex: 1,
@@ -120,10 +115,9 @@ export default function OnboardingAuthScreen() {
             >
               <View style={[
                 styles.appleButton,
-                { backgroundColor: '#000000' }, // Hardcoded black
                 isLoading && { opacity: 0.5 }
               ]}>
-                <Apple size={24} color="#FFFFFF" fill="#FFFFFF" />
+                <Apple size={24} color="#000000" fill="#000000" />
                 <Text style={styles.appleButtonText}>Continue with Apple</Text>
               </View>
             </Pressable>
@@ -148,7 +142,6 @@ export default function OnboardingAuthScreen() {
             </Text>
           </View>
         </View>
-      </LinearGradient>
     </View>
   );
 }
@@ -165,7 +158,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontFamily: 'Outfit_600SemiBold',
-    color: '#1A1A2E',
+    color: '#FFFFFF',
     lineHeight: 52,
     textAlign: 'left',
   },
@@ -176,7 +169,7 @@ const styles = StyleSheet.create({
   },
   appleButton: {
     flexDirection: 'row',
-    backgroundColor: '#000000', // Pure black
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 18,
     alignItems: 'center',
@@ -188,17 +181,17 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 6,
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   appleButtonText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 22,
     fontFamily: 'Outfit_500Medium',
   },
   footerText: {
     fontSize: 14,
     fontFamily: 'Outfit_400Regular',
-    color: '#1A1A2E',
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 20,

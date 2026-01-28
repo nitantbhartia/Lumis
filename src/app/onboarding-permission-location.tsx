@@ -28,8 +28,8 @@ export default function OnboardingPermissionLocationScreen() {
             console.log('[Location Permission] Error:', e);
         }
 
-        // Navigate to Screen Time permission (next step)
-        router.push('/onboarding-permission-screentime');
+        // Navigate to Notifications permission (skip screentime - already requested in commitment screen)
+        router.push('/onboarding-permission-notifications');
     };
 
     const handleBack = () => {
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         textAlign: 'center',
         marginBottom: 16,
     },
@@ -157,6 +157,6 @@ const styles = StyleSheet.create({
     allowButtonText: {
         fontSize: 18,
         fontFamily: 'Outfit_600SemiBold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
     },
 });

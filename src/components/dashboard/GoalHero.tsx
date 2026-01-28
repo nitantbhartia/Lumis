@@ -8,7 +8,10 @@ import Animated, {
     Easing,
     FadeIn,
 } from 'react-native-reanimated';
-import { Cloud, Sun, Flame, Zap } from 'lucide-react-native';
+import { Cloud, Sun, Flame, Zap, Moon } from 'lucide-react-native';
+import { CompletedGoalHero } from './CompletedGoalHero';
+import { useLumisStore } from '@/lib/state/lumis-store';
+import { ACHIEVEMENTS } from '@/lib/achievements';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +22,7 @@ interface GoalHeroProps {
     weatherCondition?: string;
     missionTitle?: string;
     missionMessage?: string;
+    personalizedTip?: string;
 }
 
 export function GoalHero({
@@ -28,11 +32,37 @@ export function GoalHero({
     weatherCondition,
     missionTitle,
     missionMessage,
+    personalizedTip,
 }: GoalHeroProps) {
     const remainingMinutes = Math.max(0, goalMinutes - todayMinutes);
     const progress = Math.min(todayMinutes / goalMinutes, 1);
     const hasProgress = todayMinutes > 0;
-    const isComplete = todayMinutes >= goalMinutes;
+    const isComplete = goalMinutes > 0 && todayMinutes >= goalMinutes;
+
+    // Get data for completion state
+    const currentStreak = useLumisStore((s) => s.currentStreak);
+    const blockedApps = useLumisStore((s) => s.blockedApps);
+    const achievements = useLumisStore((s) => s.achievements);
+
+    const unlockedAppsCount = blockedApps.filter(app => !app.isBlocked).length;
+
+    // Calculate next milestone
+    const getNextMilestone = () => {
+        const milestones = [3, 7, 14, 30, 50, 100, 365];
+        const nextMilestone = milestones.find(m => m > currentStreak);
+        if (!nextMilestone) return null;
+
+        const achievement = ACHIEVEMENTS.find(a =>
+            a.category === 'streak' && a.requirement === nextMilestone
+        );
+
+        if (!achievement) return null;
+
+        return {
+            daysUntil: nextMilestone - currentStreak,
+            title: achievement.title,
+        };
+    };
 
     // Subtle breathing animation for the number
     const breathe = useSharedValue(1);
@@ -52,6 +82,7 @@ export function GoalHero({
     const getMissionIcon = () => {
         if (!missionTitle) return <Cloud size={14} color="#FF8C00" />;
         const title = missionTitle.toLowerCase();
+        if (title.includes('night') || title.includes('rest')) return <Moon size={14} color="#9CA3AF" />;
         if (title.includes('streak')) return <Flame size={14} color="#FF6B35" />;
         if (title.includes('clear') || title.includes('sprint')) return <Sun size={14} color="#FFB347" />;
         if (title.includes('cloud') || title.includes('anchor')) return <Cloud size={14} color="#64748B" />;
@@ -60,13 +91,12 @@ export function GoalHero({
 
     if (isComplete) {
         return (
-            <Animated.View entering={FadeIn.duration(400)} style={styles.container}>
-                <Text style={styles.completeEmoji}>✓</Text>
-                <Text style={styles.completeTitle}>Goal Complete</Text>
-                <Text style={styles.completeSubtitle}>
-                    {Math.round(todayMinutes)} minutes of light today
-                </Text>
-            </Animated.View>
+            <CompletedGoalHero
+                lightMinutes={todayMinutes}
+                currentStreak={currentStreak}
+                unlockedAppsCount={unlockedAppsCount}
+                nextMilestone={getNextMilestone()}
+            />
         );
     }
 
@@ -85,13 +115,13 @@ export function GoalHero({
                 {/* Large Goal Number */}
                 <Animated.View style={breatheStyle}>
                     <Text style={styles.goalNumber}>
-                        {Math.round(hasProgress ? remainingMinutes : goalMinutes)}
+                        {goalMinutes === 0 ? '—' : Math.round(hasProgress ? remainingMinutes : goalMinutes)}
                     </Text>
                 </Animated.View>
 
                 {/* Subtitle */}
                 <Text style={styles.subtitle}>
-                    {hasProgress ? 'minutes remaining' : 'minutes of outdoor light'}
+                    {goalMinutes === 0 ? 'tracking paused until sunrise' : hasProgress ? 'minutes remaining' : 'minutes outside'}
                 </Text>
 
                 {/* Progress bar (only if partial progress) */}
@@ -116,6 +146,15 @@ export function GoalHero({
                     <Text style={styles.missionMessage}>
                         {missionMessage}
                     </Text>
+                )}
+
+                {/* Personalized Tip (based on onboarding data) */}
+                {personalizedTip && !hasProgress && (
+                    <View style={styles.personalizedTipContainer}>
+                        <Text style={styles.personalizedTip}>
+                            💡 {personalizedTip}
+                        </Text>
+                    </View>
                 )}
             </View>
         </View>
@@ -175,6 +214,22 @@ const styles = StyleSheet.create({
         marginTop: 16,
         lineHeight: 20,
         paddingHorizontal: 8,
+    },
+    personalizedTipContainer: {
+        backgroundColor: 'rgba(255, 200, 87, 0.15)',
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        marginTop: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 200, 87, 0.3)',
+    },
+    personalizedTip: {
+        fontSize: 13,
+        fontFamily: 'Outfit_500Medium',
+        color: '#92400E',
+        textAlign: 'center',
+        lineHeight: 18,
     },
     progressContainer: {
         width: '100%',

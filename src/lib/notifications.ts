@@ -19,6 +19,7 @@ export interface NotificationPreferences {
   morningReminderTime: string; // HH:MM format
   streakReminder: boolean;
   streakReminderTime: string; // HH:MM format
+  streakAtRiskReminder: boolean;
   goalCompleteNotification: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string; // HH:MM format
@@ -31,6 +32,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
   morningReminderTime: '08:00',
   streakReminder: true,
   streakReminderTime: '20:00',
+  streakAtRiskReminder: true,
   goalCompleteNotification: true,
   quietHoursEnabled: false,
   quietHoursStart: '22:00',
@@ -86,8 +88,8 @@ class NotificationService {
       const id = await Notifications.scheduleNotificationAsync({
         identifier: 'morning-reminder',
         content: {
-          title: '☀️ Good Morning!',
-          body: 'Time to earn your screen time! Step outside and soak up some sunlight.',
+          title: 'Time to unlock your apps',
+          body: 'Step outside for 2 minutes or pay $1. Your call.',
           sound: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
           data: { type: 'morning-reminder' },
@@ -124,7 +126,7 @@ class NotificationService {
         identifier: 'streak-reminder',
         content: {
           title: '🔥 Don\'t Break Your Streak!',
-          body: 'You haven\'t completed your light goal today. Go outside to keep your streak alive!',
+          body: 'You haven\'t completed today\'s challenge. Get outside to keep your streak alive!',
           sound: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
           data: { type: 'streak-reminder' },
@@ -192,6 +194,68 @@ class NotificationService {
       });
     } catch (error) {
       console.error('Error sending streak milestone notification:', error);
+    }
+  }
+
+  async scheduleStreakAtRiskNotification(currentStreak: number, hoursBeforeSunset: number = 2): Promise<string | null> {
+    if (!this.permissionGranted) {
+      await this.requestPermissions();
+    }
+
+    if (!this.permissionGranted) return null;
+
+    // Only send if user has an active streak worth protecting
+    if (currentStreak < 2) return null;
+
+    // Cancel existing streak-at-risk notification
+    await this.cancelNotification('streak-at-risk');
+
+    try {
+      const id = await Notifications.scheduleNotificationAsync({
+        identifier: 'streak-at-risk',
+        content: {
+          title: '⚠️ Streak at Risk!',
+          body: `Your ${currentStreak}-day streak is in danger! Complete your light goal before sunset to keep it alive.`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          data: { type: 'streak-at-risk', streak: currentStreak },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: hoursBeforeSunset * 3600,
+        },
+      });
+
+      return id;
+    } catch (error) {
+      console.error('Error scheduling streak-at-risk notification:', error);
+      return null;
+    }
+  }
+
+  async sendStreakAtRiskNow(currentStreak: number): Promise<void> {
+    if (!this.permissionGranted) {
+      await this.requestPermissions();
+    }
+
+    if (!this.permissionGranted) return;
+
+    // Only send if user has an active streak worth protecting
+    if (currentStreak < 2) return;
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⚠️ Streak at Risk!',
+          body: `Your ${currentStreak}-day streak is in danger! Complete your light goal before sunset to keep it alive.`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          data: { type: 'streak-at-risk', streak: currentStreak },
+        },
+        trigger: null, // Send immediately
+      });
+    } catch (error) {
+      console.error('Error sending streak-at-risk notification:', error);
     }
   }
 

@@ -12,7 +12,9 @@ export const REVENUECAT_ENTITLEMENTS = {
 };
 
 export const REVENUECAT_OFFERINGS = {
-    EMERGENCY_FLARE: 'emergency_flare',
+    SKIP_PASS: 'skip_pass',
+    // Legacy alias for backwards compatibility
+    EMERGENCY_FLARE: 'skip_pass',
 };
 
 export const initRevenueCat = async () => {

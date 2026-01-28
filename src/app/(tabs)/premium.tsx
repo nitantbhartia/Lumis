@@ -17,10 +17,10 @@ import { PurchasesPackage } from 'react-native-purchases';
 const { width, height } = Dimensions.get('window');
 
 const PREMIUM_FEATURES = [
-    'Morning Light Guidance',
-    'Vitamin D Tracking & Insights',
-    'Lux Detection',
-    'Body Clock & Light Diet',
+    'Unlimited App Shields',
+    'Extended Daily Goals (up to 60 min)',
+    'Deep Analytics & Insights',
+    'Streak Insurance (2 freezes/month)',
     'Live Activities & Widgets',
 ];
 
@@ -40,6 +40,15 @@ export default function PremiumTab() {
     const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
 
     const mockPackages: any[] = [
+        {
+            identifier: '$rc_lifetime',
+            product: {
+                priceString: '$79.99',
+                price: 79.99,
+                title: 'Lifetime',
+            },
+            packageType: 'LIFETIME',
+        },
         {
             identifier: '$rc_annual',
             product: {
@@ -69,11 +78,13 @@ export default function PremiumTab() {
             const result = await getOfferings();
             if (result.ok && result.data.current) {
                 setPackages(result.data.current.availablePackages);
+                // Default to lifetime if available, otherwise annual
+                const lifetime = result.data.current.availablePackages.find(p => p.packageType === 'LIFETIME');
                 const annual = result.data.current.availablePackages.find(p => p.packageType === 'ANNUAL');
-                setSelectedPackage(annual || result.data.current.availablePackages[0]);
+                setSelectedPackage(lifetime || annual || result.data.current.availablePackages[0]);
             } else {
                 setPackages(mockPackages);
-                setSelectedPackage(mockPackages[0]);
+                setSelectedPackage(mockPackages[0]); // Lifetime is first
             }
         } catch (e) {
             setPackages(mockPackages);
@@ -120,11 +131,6 @@ export default function PremiumTab() {
 
     return (
         <View style={styles.container}>
-            <LinearGradient
-                colors={['#A8C8DC', '#C4B8D8', '#F5C6AA', '#F8A868']}
-                locations={[0, 0.3, 0.6, 1]}
-                style={StyleSheet.absoluteFill}
-            />
 
             <View style={[styles.headerActions, { paddingTop: insets.top + 10 }]}>
                 <Pressable
@@ -165,9 +171,16 @@ export default function PremiumTab() {
                 </Animated.View>
 
                 <View style={styles.optionsContainer}>
-                    {packages.slice(0, 2).map((pkg) => {
+                    {packages.slice(0, 3).map((pkg) => {
                         const isSelected = selectedPackage?.identifier === pkg.identifier;
+                        const isLifetime = pkg.packageType === 'LIFETIME';
                         const isAnnual = pkg.packageType === 'ANNUAL';
+
+                        const getPriceLabel = () => {
+                            if (isLifetime) return `${pkg.product.priceString} once`;
+                            if (isAnnual) return `${pkg.product.priceString}/year • 3-day free trial`;
+                            return `${pkg.product.priceString}/month • 7-day free trial`;
+                        };
 
                         return (
                             <Pressable
@@ -178,17 +191,20 @@ export default function PremiumTab() {
                                 }}
                                 style={[styles.optionCard, isSelected && styles.optionCardSelected]}
                             >
-                                {isAnnual && (
-                                    <View style={styles.bestValueBadge}>
+                                {isLifetime && (
+                                    <View style={[styles.bestValueBadge, { backgroundColor: '#7C3AED' }]}>
                                         <Text style={styles.bestValueText}>BEST VALUE</Text>
+                                    </View>
+                                )}
+                                {isAnnual && !isLifetime && (
+                                    <View style={styles.bestValueBadge}>
+                                        <Text style={styles.bestValueText}>POPULAR</Text>
                                     </View>
                                 )}
                                 <View style={styles.optionContent}>
                                     <View>
                                         <Text style={styles.optionTitle}>{pkg.product.title}</Text>
-                                        <Text style={styles.optionPrice}>
-                                            {pkg.product.priceString}/{isAnnual ? 'year' : 'month'} • {isAnnual ? '3' : '7'}-day free trial
-                                        </Text>
+                                        <Text style={styles.optionPrice}>{getPriceLabel()}</Text>
                                     </View>
                                     {isSelected ? (
                                         <View style={styles.checkCircleActive}>
@@ -234,6 +250,7 @@ export default function PremiumTab() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#0F172A',
     },
     headerActions: {
         flexDirection: 'row',
@@ -250,7 +267,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     headerTextItem: {
-        color: 'rgba(26,26,46,0.4)',
+        color: 'rgba(255, 255, 255, 0.5)',
         fontSize: 15,
         fontFamily: 'Outfit_600SemiBold',
     },
@@ -267,17 +284,17 @@ const styles = StyleSheet.create({
         width: 54,
         height: 54,
         borderRadius: 27,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     title: {
         fontSize: 24,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         textAlign: 'center',
         lineHeight: 30,
         marginBottom: 24,
@@ -298,7 +315,7 @@ const styles = StyleSheet.create({
     featureText: {
         fontSize: 15,
         fontFamily: 'Outfit_600SemiBold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         letterSpacing: 0.1,
     },
     optionsContainer: {
@@ -306,14 +323,14 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     optionCard: {
-        backgroundColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 16,
         padding: 18,
         borderWidth: 2,
         borderColor: 'transparent',
     },
     optionCardSelected: {
-        backgroundColor: 'rgba(255,255,255,0.5)',
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
         borderColor: '#3B82F6',
     },
     bestValueBadge: {
@@ -339,19 +356,19 @@ const styles = StyleSheet.create({
     optionTitle: {
         fontSize: 17,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         marginBottom: 2,
     },
     optionPrice: {
         fontSize: 13,
-        color: 'rgba(26,26,46,0.6)',
+        color: 'rgba(255, 255, 255, 0.6)',
         fontFamily: 'Outfit_500Medium',
     },
     checkCircleActive: {
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#1A1A2E',
+        backgroundColor: '#3B82F6',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -360,7 +377,7 @@ const styles = StyleSheet.create({
         height: 24,
         borderRadius: 12,
         borderWidth: 1.5,
-        borderColor: 'rgba(26,26,46,0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     footer: {
         paddingHorizontal: 24,
@@ -370,7 +387,7 @@ const styles = StyleSheet.create({
         width: '100%',
         borderRadius: 14,
         overflow: 'hidden',
-        backgroundColor: '#000',
+        backgroundColor: '#FF6B35',
         marginBottom: 12,
     },
     subscribeBtnBg: {
@@ -383,7 +400,7 @@ const styles = StyleSheet.create({
         color: '#FFF',
     },
     footerCancelText: {
-        color: 'rgba(26,26,46,0.4)',
+        color: 'rgba(255, 255, 255, 0.4)',
         fontSize: 11,
         fontFamily: 'Outfit_500Medium',
         marginBottom: 12,
@@ -393,7 +410,7 @@ const styles = StyleSheet.create({
         gap: 20,
     },
     linkText: {
-        color: 'rgba(26,26,46,0.4)',
+        color: 'rgba(255, 255, 255, 0.4)',
         fontSize: 11,
         fontFamily: 'Outfit_600SemiBold',
     },

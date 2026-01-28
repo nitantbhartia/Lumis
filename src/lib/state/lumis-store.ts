@@ -79,6 +79,8 @@ interface LumisState {
   todayProgress: DailyProgress;
   updateTodayProgress: (progress: Partial<DailyProgress>) => void;
   resetTodayProgress: () => void;
+  hasSeenCompletionToday: boolean;
+  setHasSeenCompletionToday: (value: boolean) => void;
 
   // Streaks
   currentStreak: number;
@@ -86,6 +88,11 @@ interface LumisState {
   totalDaysCompleted: number;
   incrementStreak: () => void;
   resetStreak: () => void;
+
+  // Stone Collection (Endowed Progress)
+  collectedStones: number[]; // Milestone days collected: [1, 7, 14, 30, 60, 100, 365]
+  hasReceivedInitialStreak: boolean;
+  awardInitialStreak: () => void;
 
   // History
   progressHistory: DailyProgress[];
@@ -155,6 +162,8 @@ interface LumisState {
   setScreenBeforeBed: (value: 'always' | 'often' | 'sometimes' | 'rarely') => void;
   morningEnergyLevel: 'exhausted' | 'sluggish' | 'okay' | 'energized' | null;
   setMorningEnergyLevel: (value: 'exhausted' | 'sluggish' | 'okay' | 'energized') => void;
+  morningScrollTime: string | null; // Store as minutes string, e.g., "30"
+  setMorningScrollTime: (value: string | number) => void;
 
   // Preferences
   skinType: 1 | 2 | 3 | 4 | 5 | 6; // Fitzpatrick Scale
@@ -164,10 +173,22 @@ interface LumisState {
   selectedActivity: 'walk' | 'run' | 'meditate' | 'sit_soak' | null;
   setSelectedActivity: (value: 'walk' | 'run' | 'meditate' | 'sit_soak' | null) => void;
 
-  // Emergency Flares (Consumables)
+  // Skip Passes (Consumables) - formerly Emergency Flares
+  skipPasses: number;
+  addSkipPasses: (count: number) => void;
+  consumeSkipPass: () => void;
+
+  // Legacy aliases for backwards compatibility
   emergencyFlares: number;
   addEmergencyFlares: (count: number) => void;
   consumeEmergencyFlare: () => void;
+
+  // Streak Freeze (Premium Feature)
+  streakFreezesUsedThisMonth: number;
+  streakFreezesPerMonth: number; // Default: 2 for premium
+  lastStreakFreezeResetMonth: string;
+  useStreakFreeze: () => boolean;
+  getRemainingStreakFreezes: () => number;
 
   // Activity History
   activityHistory: ActivitySession[];
@@ -204,6 +225,43 @@ interface LumisState {
   // Shield State (Synced with Native)
   isShieldEngaged: boolean;
   setShieldEngaged: (engaged: boolean) => void;
+
+  // Stakes & Accountability (V2 Pivot)
+  stakesEnabled: boolean;
+  setStakesEnabled: (enabled: boolean) => void;
+  selectedCharity: 'red-cross' | 'doctors-without-borders' | 'world-wildlife' | 'feeding-america' | 'team-trees' | null;
+  setSelectedCharity: (charity: 'red-cross' | 'doctors-without-borders' | 'world-wildlife' | 'feeding-america' | 'team-trees') => void;
+  penaltiesThisMonth: number;
+  lastPenaltyResetMonth: string; // "2026-01"
+  totalDonatedAmount: number;
+  recordPenalty: (amount: number) => void;
+
+  // Progressive Difficulty (V2 Pivot)
+  firstSessionDate: string | null; // ISO date of first completed session
+  setFirstSessionDate: (date: string) => void;
+  getDaysInProgram: () => number;
+
+  // App Version
+  appVersion: string;
+
+  // Focus Score (V2 Pivot)
+  focusScore: number;
+  focusScoreTimestamp: string | null;
+  distractingMinutesToday: number;
+  focusSunlightBonusApplied: boolean;
+  focusRatio: number;
+  focusPenaltyDeductions: number;
+  outdoorLuxSecondsToday: number;
+  updateFocusScore: (data: {
+    score: number;
+    timestamp: string;
+    distractingMinutes: number;
+    sunlightBonusApplied: boolean;
+    focusRatio: number;
+    penaltyDeductions: number;
+  }) => void;
+  incrementOutdoorLuxSeconds: () => void;
+  resetDailyFocusMetrics: () => void;
 }
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -289,7 +347,7 @@ export const useLumisStore = create<LumisState>()(
       },
 
       // Daily Goal
-      dailyGoalMinutes: 10,
+      dailyGoalMinutes: 2, // V2 Pivot: Start at 2 minutes
       setDailyGoalMinutes: (minutes) => set({ dailyGoalMinutes: minutes }),
 
       // Wake Window
@@ -299,6 +357,8 @@ export const useLumisStore = create<LumisState>()(
 
       // Progress
       todayProgress: initialProgress,
+      hasSeenCompletionToday: false,
+      setHasSeenCompletionToday: (value) => set({ hasSeenCompletionToday: value }),
       updateTodayProgress: (progress) => {
         const state = get();
         const updated = { ...state.todayProgress, ...progress };
@@ -344,6 +404,7 @@ export const useLumisStore = create<LumisState>()(
         set({
           todayProgress: { ...initialProgress, date: getTodayDate() },
           emergencyUnlockUsedToday: false,
+          hasSeenCompletionToday: false,
           daysWithoutEmergencyUnlock: state.emergencyUnlockUsedToday
             ? 0
             : state.daysWithoutEmergencyUnlock + 1,
@@ -363,10 +424,18 @@ export const useLumisStore = create<LumisState>()(
           set({ hasHadStreakBefore: true });
         }
 
+        // Check for stone milestones to award
+        const STONE_MILESTONES = [1, 7, 14, 30, 60, 100, 365];
+        const newStones = [...state.collectedStones];
+        if (STONE_MILESTONES.includes(newStreak) && !newStones.includes(newStreak)) {
+          newStones.push(newStreak);
+        }
+
         set({
           currentStreak: newStreak,
           longestStreak: Math.max(newStreak, state.longestStreak),
           totalDaysCompleted: state.totalDaysCompleted + 1,
+          collectedStones: newStones,
         });
 
         // Send streak milestone notifications
@@ -380,6 +449,23 @@ export const useLumisStore = create<LumisState>()(
         if (state.currentStreak > 0) {
           set({ hasHadStreakBefore: true, currentStreak: 0 });
         }
+      },
+
+      // Stone Collection (Endowed Progress)
+      collectedStones: [],
+      hasReceivedInitialStreak: false,
+      awardInitialStreak: () => {
+        const state = get();
+        // Prevent double-awarding
+        if (state.hasReceivedInitialStreak) return;
+
+        set({
+          currentStreak: 1,
+          longestStreak: Math.max(1, state.longestStreak),
+          collectedStones: [1], // First stone collected
+          hasReceivedInitialStreak: true,
+          firstSessionDate: state.firstSessionDate || new Date().toISOString(),
+        });
       },
 
       // History
@@ -579,6 +665,8 @@ export const useLumisStore = create<LumisState>()(
       setScreenBeforeBed: (value) => set({ screenBeforeBed: value }),
       morningEnergyLevel: null,
       setMorningEnergyLevel: (value) => set({ morningEnergyLevel: value }),
+      morningScrollTime: null,
+      setMorningScrollTime: (value) => set({ morningScrollTime: String(value) }),
 
       // Preferences
       skinType: 2,
@@ -596,20 +684,65 @@ export const useLumisStore = create<LumisState>()(
         lastCompletedSession: session
       })),
 
-      // Emergency Flares
-      emergencyFlares: 0,
-      addEmergencyFlares: (count) => set((s) => ({ emergencyFlares: s.emergencyFlares + count })),
-      consumeEmergencyFlare: () => set((s) => ({ emergencyFlares: Math.max(0, s.emergencyFlares - 1) })),
+      // Skip Passes (formerly Emergency Flares)
+      skipPasses: 0,
+      addSkipPasses: (count) => set((s) => ({ skipPasses: s.skipPasses + count })),
+      consumeSkipPass: () => set((s) => ({ skipPasses: Math.max(0, s.skipPasses - 1) })),
+
+      // Legacy aliases - map to new skipPasses for backwards compatibility
+      get emergencyFlares() { return get().skipPasses; },
+      addEmergencyFlares: (count) => set((s) => ({ skipPasses: s.skipPasses + count })),
+      consumeEmergencyFlare: () => set((s) => ({ skipPasses: Math.max(0, s.skipPasses - 1) })),
+
+      // Streak Freeze (Premium Feature)
+      streakFreezesUsedThisMonth: 0,
+      streakFreezesPerMonth: 2,
+      lastStreakFreezeResetMonth: new Date().toISOString().slice(0, 7),
+
+      useStreakFreeze: () => {
+        const state = get();
+        // Only premium users can use streak freezes
+        if (!state.isPremium && !state.isTrialActive()) return false;
+
+        const currentMonth = new Date().toISOString().slice(0, 7);
+
+        // Reset counter if new month
+        if (state.lastStreakFreezeResetMonth !== currentMonth) {
+          set({
+            streakFreezesUsedThisMonth: 0,
+            lastStreakFreezeResetMonth: currentMonth,
+          });
+        }
+
+        const updatedState = get();
+        if (updatedState.streakFreezesUsedThisMonth < updatedState.streakFreezesPerMonth) {
+          set({ streakFreezesUsedThisMonth: updatedState.streakFreezesUsedThisMonth + 1 });
+          return true;
+        }
+        return false;
+      },
+
+      getRemainingStreakFreezes: () => {
+        const state = get();
+        // Non-premium users get 0 freezes
+        if (!state.isPremium && !state.isTrialActive()) return 0;
+
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        if (state.lastStreakFreezeResetMonth !== currentMonth) {
+          return state.streakFreezesPerMonth;
+        }
+        return Math.max(0, state.streakFreezesPerMonth - state.streakFreezesUsedThisMonth);
+      },
 
       // Active Session (Timer Persistence)
       activeSession: {
         startTime: null,
         accumulatedSeconds: 0,
-        goalSeconds: 960, // 16 minutes default
+        goalSeconds: 120, // V2 Pivot: 2 minutes default
         lastSaveTime: null,
         isActive: false,
       },
-      startActiveSession: (goalSeconds = 960) => set({
+      startActiveSession: (goalSeconds = 120) => set({
         activeSession: {
           startTime: new Date().toISOString(),
           accumulatedSeconds: 0,
@@ -706,6 +839,76 @@ export const useLumisStore = create<LumisState>()(
       // Shield State
       isShieldEngaged: false,
       setShieldEngaged: (engaged) => set({ isShieldEngaged: engaged }),
+
+      // Stakes & Accountability (V2 Pivot)
+      stakesEnabled: false, // Opt-in only
+      setStakesEnabled: (enabled) => set({ stakesEnabled: enabled }),
+      selectedCharity: null,
+      setSelectedCharity: (charity) => set({ selectedCharity: charity }),
+      penaltiesThisMonth: 0,
+      lastPenaltyResetMonth: new Date().toISOString().slice(0, 7),
+      totalDonatedAmount: 0,
+      recordPenalty: (amount) => {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const state = get();
+
+        // Reset counter if new month
+        if (state.lastPenaltyResetMonth !== currentMonth) {
+          set({ penaltiesThisMonth: 0, lastPenaltyResetMonth: currentMonth });
+        }
+
+        set({
+          penaltiesThisMonth: state.penaltiesThisMonth + 1,
+          totalDonatedAmount: state.totalDonatedAmount + amount
+        });
+      },
+
+      // Progressive Difficulty (V2 Pivot)
+      firstSessionDate: null,
+      setFirstSessionDate: (date) => set({ firstSessionDate: date }),
+      getDaysInProgram: () => {
+        const state = get();
+        if (!state.firstSessionDate) return 0;
+        const start = new Date(state.firstSessionDate);
+        const now = new Date();
+        const diffMs = now.getTime() - start.getTime();
+        return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      },
+
+      // App Version
+      appVersion: '2.0.0',
+
+      // Focus Score (V2 Pivot)
+      focusScore: 0,
+      focusScoreTimestamp: null,
+      distractingMinutesToday: 0,
+      focusSunlightBonusApplied: false,
+      focusRatio: 0,
+      focusPenaltyDeductions: 0,
+      outdoorLuxSecondsToday: 0,
+
+      updateFocusScore: (data) => set({
+        focusScore: data.score,
+        focusScoreTimestamp: data.timestamp,
+        distractingMinutesToday: data.distractingMinutes,
+        focusSunlightBonusApplied: data.sunlightBonusApplied,
+        focusRatio: data.focusRatio,
+        focusPenaltyDeductions: data.penaltyDeductions,
+      }),
+
+      incrementOutdoorLuxSeconds: () => set((s) => ({
+        outdoorLuxSecondsToday: s.outdoorLuxSecondsToday + 1,
+      })),
+
+      resetDailyFocusMetrics: () => set({
+        focusScore: 0,
+        focusScoreTimestamp: null,
+        distractingMinutesToday: 0,
+        focusSunlightBonusApplied: false,
+        focusRatio: 0,
+        focusPenaltyDeductions: 0,
+        outdoorLuxSecondsToday: 0,
+      }),
     }),
     {
       name: 'lumis-storage',
@@ -732,7 +935,9 @@ export const useLumisStore = create<LumisState>()(
         overachieverDaysCount: state.overachieverDaysCount,
         daysWithoutEmergencyUnlock: state.daysWithoutEmergencyUnlock,
         hasHadStreakBefore: state.hasHadStreakBefore,
-        emergencyFlares: state.emergencyFlares,
+        skipPasses: state.skipPasses,
+        streakFreezesUsedThisMonth: state.streakFreezesUsedThisMonth,
+        lastStreakFreezeResetMonth: state.lastStreakFreezeResetMonth,
         activityHistory: state.activityHistory,
         lastCompletedSession: state.lastCompletedSession,
         activeSession: state.activeSession,
@@ -749,6 +954,27 @@ export const useLumisStore = create<LumisState>()(
         brainFogFrequency: state.brainFogFrequency,
         screenBeforeBed: state.screenBeforeBed,
         morningEnergyLevel: state.morningEnergyLevel,
+        todayProgress: state.todayProgress,
+        hasSeenCompletionToday: state.hasSeenCompletionToday,
+        // V2 Pivot Fields
+        stakesEnabled: state.stakesEnabled,
+        selectedCharity: state.selectedCharity,
+        penaltiesThisMonth: state.penaltiesThisMonth,
+        lastPenaltyResetMonth: state.lastPenaltyResetMonth,
+        totalDonatedAmount: state.totalDonatedAmount,
+        firstSessionDate: state.firstSessionDate,
+        appVersion: state.appVersion,
+        // Focus Score
+        focusScore: state.focusScore,
+        focusScoreTimestamp: state.focusScoreTimestamp,
+        distractingMinutesToday: state.distractingMinutesToday,
+        focusSunlightBonusApplied: state.focusSunlightBonusApplied,
+        focusRatio: state.focusRatio,
+        focusPenaltyDeductions: state.focusPenaltyDeductions,
+        outdoorLuxSecondsToday: state.outdoorLuxSecondsToday,
+        // Stone Collection
+        collectedStones: state.collectedStones,
+        hasReceivedInitialStreak: state.hasReceivedInitialStreak,
       }),
     }
   )

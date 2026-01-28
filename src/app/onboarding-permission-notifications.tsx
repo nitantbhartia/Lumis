@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Bell } from 'lucide-react-native';
 import { notificationService } from '@/lib/notifications';
-import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
 
 export default function OnboardingPermissionNotificationsScreen() {
     const router = useRouter();
@@ -25,8 +23,13 @@ export default function OnboardingPermissionNotificationsScreen() {
             console.log('[Notifications Permission] Error:', e);
         }
 
-        // Navigate to success screen
-        router.push('/onboarding-success');
+        // Navigate to wake time schedule
+        router.push('/onboarding-question-wakeup');
+    };
+
+    const handleSkip = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push('/onboarding-question-wakeup');
     };
 
     const handleBack = () => {
@@ -34,76 +37,74 @@ export default function OnboardingPermissionNotificationsScreen() {
         router.back();
     };
 
-
     return (
-        <View style={{ flex: 1 }}>
-            <LinearGradient
-                colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
-                locations={[0, 0.3, 0.7, 1]}
-                style={{ flex: 1 }}
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        paddingTop: insets.top + 16,
-                        paddingBottom: insets.bottom + 24,
-                        paddingHorizontal: 24,
-                    }}
-                >
-                    {/* Back Button */}
-                    <Pressable onPress={handleBack} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#1A1A2E" strokeWidth={2} />
-                    </Pressable>
+        <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+            {/* Back Button */}
+            <Pressable onPress={handleBack} style={styles.backButton}>
+                <ArrowLeft size={24} color="#FFFFFF" strokeWidth={2} />
+            </Pressable>
 
-                    {/* Icon */}
-                    <Animated.View entering={FadeIn.duration(500)} style={styles.iconContainer}>
-                        <View style={styles.iconCircle}>
-                            <Bell size={48} color="#1A1A2E" strokeWidth={1.5} />
-                        </View>
-                    </Animated.View>
-
-                    {/* Title & Description */}
-                    <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.textContainer}>
-                        <Text style={styles.title}>Stay on track</Text>
-                        <Text style={styles.description}>
-                            We'll send a gentle nudge each morning to remind you to get your light, and celebrate your wins along the way.
-                        </Text>
-                    </Animated.View>
-
-                    {/* Spacer */}
-                    <View style={{ flex: 1 }} />
-
-                    {/* Buttons */}
-                    <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.buttonsContainer}>
-                        <View style={styles.allowButtonContainer}>
-                            <LumisHeroButton
-                                title={isRequesting ? 'Requesting...' : 'Allow Notifications'}
-                                onPress={handleAllow}
-                                icon={<Bell size={20} color="#1A1A2E" strokeWidth={2.5} />}
-                                loading={isRequesting}
-                                disabled={isRequesting}
-                            />
-                        </View>
-                    </Animated.View>
+            {/* Icon */}
+            <Animated.View entering={FadeIn.duration(500)} style={styles.iconContainer}>
+                <View style={styles.iconCircle}>
+                    <Bell size={48} color="#FF6B35" strokeWidth={1.5} />
                 </View>
-            </LinearGradient>
+            </Animated.View>
+
+            {/* Title & Description */}
+            <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.textContainer}>
+                <Text style={styles.title}>Stay on track</Text>
+                <Text style={styles.description}>
+                    We'll send a gentle nudge each morning to remind you to get your light, and celebrate your wins along the way.
+                </Text>
+            </Animated.View>
+
+            {/* Spacer */}
+            <View style={{ flex: 1 }} />
+
+            {/* Skip option */}
+            <Animated.View entering={FadeIn.delay(600)} style={styles.skipContainer}>
+                <Pressable onPress={handleSkip}>
+                    <Text style={styles.skipText}>Skip for now</Text>
+                </Pressable>
+            </Animated.View>
+
+            {/* Button */}
+            <Animated.View
+                entering={FadeInDown.delay(400).duration(400)}
+                style={{ paddingBottom: insets.bottom }}
+            >
+                <Pressable
+                    onPress={handleAllow}
+                    disabled={isRequesting}
+                    style={({ pressed }) => [
+                        styles.button,
+                        pressed && styles.buttonPressed,
+                    ]}
+                >
+                    <Bell size={20} color="#FFFFFF" strokeWidth={2.5} />
+                    <Text style={styles.buttonText}>
+                        {isRequesting ? 'Requesting...' : 'Allow Notifications'}
+                    </Text>
+                </Pressable>
+            </Animated.View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#1A1A2E',
+        paddingHorizontal: 24,
+    },
     backButton: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
     },
     iconContainer: {
         alignItems: 'center',
@@ -113,14 +114,11 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: 'rgba(255, 107, 53, 0.15)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        borderWidth: 2,
+        borderColor: 'rgba(255, 107, 53, 0.3)',
     },
     textContainer: {
         marginTop: 32,
@@ -130,31 +128,42 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         textAlign: 'center',
         marginBottom: 16,
     },
     description: {
         fontSize: 16,
         fontFamily: 'Outfit_400Regular',
-        color: '#333',
+        color: 'rgba(255, 255, 255, 0.6)',
         textAlign: 'center',
         lineHeight: 24,
     },
-    buttonsContainer: {
-        gap: 12,
-    },
-    allowButtonContainer: {
-        width: '100%',
-    },
-    allowButton: {
-        paddingVertical: 18,
-        borderRadius: 30,
+    skipContainer: {
         alignItems: 'center',
+        marginBottom: 16,
     },
-    allowButtonText: {
+    skipText: {
+        fontSize: 16,
+        fontFamily: 'Outfit_500Medium',
+        color: 'rgba(255, 255, 255, 0.4)',
+    },
+    button: {
+        backgroundColor: '#FF6B35',
+        paddingVertical: 20,
+        marginHorizontal: -24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    buttonPressed: {
+        backgroundColor: '#E85D04',
+    },
+    buttonText: {
         fontSize: 18,
-        fontFamily: 'Outfit_600SemiBold',
-        color: '#1A1A2E',
+        fontFamily: 'Outfit_700Bold',
+        color: '#FFFFFF',
+        letterSpacing: 1,
     },
 });

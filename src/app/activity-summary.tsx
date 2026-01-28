@@ -94,7 +94,7 @@ export default function ActivitySummaryScreen() {
                                 <Text style={styles.dateTime}>{dateStr} AT {timeStr}</Text>
                             </View>
                         </View>
-                        <Pressable onPress={() => router.replace('/dashboard')} style={styles.closeButton}>
+                        <Pressable onPress={() => router.back()} style={styles.closeButton}>
                             <X size={24} color="#1A1A2E" />
                         </Pressable>
                     </View>

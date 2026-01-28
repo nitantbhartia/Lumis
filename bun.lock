@@ -127,7 +127,7 @@
         "react-native-pager-view": "6.7.1",
         "react-native-purchases": "^9.6.7",
         "react-native-purchases-ui": "^9.6.7",
-        "react-native-reanimated": "~3.17.4",
+        "react-native-reanimated": "3.17.4",
         "react-native-safe-area-context": "5.4.0",
         "react-native-screens": "~4.11.1",
         "react-native-sortables": "^1.9.3",
@@ -137,6 +137,7 @@
         "react-native-web": "^0.20.0",
         "react-native-webview": "13.13.5",
         "reanimated-tab-view": "^0.4.0",
+        "rive-react-native": "^9.8.0",
         "tailwind-merge": "^3.2.0",
         "tailwindcss": "^3.4.17",
         "uuid": "^11.1.0",
@@ -2331,6 +2332,8 @@
     "reusify": ["reusify@1.1.0", "", {}, "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw=="],
 
     "rimraf": ["rimraf@3.0.2", "", { "dependencies": { "glob": "^7.1.3" }, "bin": { "rimraf": "bin.js" } }, "sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA=="],
+
+    "rive-react-native": ["rive-react-native@9.8.0", "", { "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-5uwb3lveEo5Jfg81XJhs4wZEGxIgOU2t3OTtE6EP3dzN77K2tlujU18mqJfUbom1/r30+hBlEG8I07ZG2nG0GA=="],
 
     "run-parallel": ["run-parallel@1.2.0", "", { "dependencies": { "queue-microtask": "^1.2.2" } }, "sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA=="],
 

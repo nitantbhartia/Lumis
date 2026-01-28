@@ -1,68 +1,89 @@
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withDelay,
-  withRepeat,
+  withTiming,
   Easing,
+  FadeOut,
 } from 'react-native-reanimated';
-import { AnimatedSun } from '@/components/AnimatedSun';
+import { KineticLogo } from '@/components/onboarding/KineticLogo';
 
 export default function OnboardingSplashScreen() {
   const router = useRouter();
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(1);
+  const [logoComplete, setLogoComplete] = useState(false);
+  const taglineOpacity = useSharedValue(0);
+  const screenOpacity = useSharedValue(1);
 
   useEffect(() => {
-    // Pulsing animation
-    pulseScale.value = withRepeat(
-      withTiming(1.1, {
-        duration: 2000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    );
+    if (logoComplete) {
+      // Fade in tagline after logo completes
+      taglineOpacity.value = withTiming(1, {
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+      });
+    }
+  }, [logoComplete]);
 
-    pulseOpacity.value = withRepeat(
-      withTiming(0.7, {
-        duration: 2000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    );
-
-    // Auto-navigate after 3 seconds
+  useEffect(() => {
+    // Auto-navigate after 2.5 seconds
     const timer = setTimeout(() => {
-      router.push('/onboarding-trap');
-    }, 3000);
+      router.push('/onboarding-time-question');
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: pulseOpacity.value,
+  const taglineStyle = useAnimatedStyle(() => ({
+    opacity: taglineOpacity.value,
   }));
 
   return (
-    <View className="flex-1">
-      <LinearGradient
-        colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
-        locations={[0, 0.3, 0.7, 1]}
-        style={{ flex: 1 }}
-      >
-        <View className="flex-1 items-center justify-center">
-          <Animated.View style={pulseStyle}>
-            <AnimatedSun size={200} />
-          </Animated.View>
-        </View>
-      </LinearGradient>
+    <View style={styles.container}>
+      <View style={styles.spacer} />
+
+      <View style={styles.content}>
+        <KineticLogo
+          text="LUMIS"
+          size={72}
+          letterDelay={120}
+          letterDuration={400}
+          onComplete={() => setLogoComplete(true)}
+        />
+
+        <Animated.Text style={[styles.tagline, taglineStyle]}>
+          Unlock your mornings
+        </Animated.Text>
+      </View>
+
+      <View style={styles.spacer} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  spacer: {
+    flex: 1,
+  },
+  content: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+  },
+  tagline: {
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
+    color: 'rgba(255, 255, 255, 0.45)',
+    letterSpacing: 1.2,
+    textAlign: 'center',
+  },
+});

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
-import { Home, BarChart3, Shield, Sparkles, Plus } from 'lucide-react-native';
+import { View, StyleSheet } from 'react-native';
+import { Home, BarChart3, Shield, Sparkles } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { useLumisStore } from '@/lib/state/lumis-store';
 
 export default function TabLayout() {
@@ -14,15 +15,26 @@ export default function TabLayout() {
                 headerShown: false,
                 tabBarShowLabel: false,
                 tabBarStyle: {
-                    backgroundColor: '#FFFFFF',
-                    borderTopColor: '#E0E0E0',
-                    borderTopWidth: 1,
+                    backgroundColor: 'transparent',
+                    borderTopWidth: 0,
                     height: 80,
                     paddingBottom: 20,
                     paddingTop: 10,
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    elevation: 0,
                 },
+                tabBarBackground: () => (
+                    <BlurView
+                        intensity={80}
+                        tint="dark"
+                        style={StyleSheet.absoluteFill}
+                    />
+                ),
                 tabBarActiveTintColor: '#FF8C00',
-                tabBarInactiveTintColor: '#999999',
+                tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.4)',
             }}
         >
             <Tabs.Screen
@@ -52,7 +64,7 @@ export default function TabLayout() {
                                         borderRadius: 4,
                                         backgroundColor: '#FF6B6B',
                                         borderWidth: 1,
-                                        borderColor: '#FFF',
+                                        borderColor: '#0F172A',
                                     }}
                                 />
                             )}

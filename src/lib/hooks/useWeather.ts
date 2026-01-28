@@ -7,6 +7,9 @@ export interface WeatherData {
     city: string;
     humidity: number;
     uvIndex: number;
+    sunrise: string | null;
+    sunset: string | null;
+    isDaylight: boolean;
     loading: boolean;
     error: string | null;
 }
@@ -18,6 +21,9 @@ export function useWeather() {
         city: 'Locating...',
         humidity: 0,
         uvIndex: 0,
+        sunrise: null,
+        sunset: null,
+        isDaylight: true, // Default to true during loading
         loading: true,
         error: null,
     });
@@ -29,7 +35,12 @@ export function useWeather() {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted') {
-                    if (mounted) setData(d => ({ ...d, loading: false, error: 'Permission denied', city: 'Permission Denied' }));
+                    if (mounted) {
+                        // Use time-based fallback when permission denied
+                        const hour = new Date().getHours();
+                        const isDaylight = hour >= 6 && hour < 20;
+                        setData(d => ({ ...d, loading: false, error: 'Permission denied', city: 'Permission Denied', isDaylight }));
+                    }
                     return;
                 }
 
@@ -52,7 +63,7 @@ export function useWeather() {
                 // 2. Fetch Weather from Open-Meteo
                 // https://open-meteo.com/en/docs
                 const response = await fetch(
-                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,uv_index`
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,uv_index&daily=sunrise,sunset&timezone=auto`
                 );
                 const jsonData = await response.json();
 
@@ -60,12 +71,34 @@ export function useWeather() {
                     const code = jsonData.current.weather_code;
                     const condition = getWeatherCondition(code);
 
+                    // Parse sunrise/sunset and calculate isDaylight
+                    let sunrise: string | null = null;
+                    let sunset: string | null = null;
+                    let isDaylight = true; // Default fallback
+
+                    if (jsonData.daily?.sunrise?.[0] && jsonData.daily?.sunset?.[0]) {
+                        sunrise = jsonData.daily.sunrise[0];
+                        sunset = jsonData.daily.sunset[0];
+
+                        const now = new Date();
+                        const sunriseTime = new Date(sunrise);
+                        const sunsetTime = new Date(sunset);
+                        isDaylight = now >= sunriseTime && now <= sunsetTime;
+                    } else {
+                        // Fallback: time-based heuristic if API doesn't provide sunrise/sunset
+                        const hour = new Date().getHours();
+                        isDaylight = hour >= 6 && hour < 20;
+                    }
+
                     setData({
                         temperature: jsonData.current.temperature_2m,
                         condition: condition,
                         city: city,
                         humidity: jsonData.current.relative_humidity_2m,
-                        uvIndex: jsonData.current.uv_index || 0, // Note: Open-Meteo provides UV
+                        uvIndex: jsonData.current.uv_index || 0,
+                        sunrise,
+                        sunset,
+                        isDaylight,
                         loading: false,
                         error: null,
                     });

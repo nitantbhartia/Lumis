@@ -19,6 +19,7 @@ import {
   User,
   Trophy,
   Heart,
+  Crown,
 } from 'lucide-react-native';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
@@ -66,12 +67,15 @@ export default function SettingsScreen() {
   };
 
   const handleIncrementGoal = () => {
+    // Free users capped at 10 min, premium users can go up to 60 min
+    const maxGoal = hasPremiumAccess ? 60 : 10;
+
     if (!hasPremiumAccess && dailyGoalMinutes >= 10) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       router.push('/premium');
       return;
     }
-    if (dailyGoalMinutes < 30) {
+    if (dailyGoalMinutes < maxGoal) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setDailyGoalMinutes(dailyGoalMinutes + 1);
     }
@@ -280,8 +284,16 @@ export default function SettingsScreen() {
                   <User size={22} color="#FFF8E7" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-lumis-dawn text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>{formatFirstName(user?.name || 'Explorer')}</Text>
-                  <Text className="text-lumis-sunrise/40 text-sm">{user?.email || 'Premium member'}</Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-lumis-dawn text-lg" style={{ fontFamily: 'Outfit_600SemiBold' }}>{formatFirstName(user?.name || 'Explorer')}</Text>
+                    {hasPremiumAccess && (
+                      <View className="flex-row items-center bg-amber-500/20 px-2 py-0.5 rounded-full">
+                        <Crown size={10} color="#F59E0B" />
+                        <Text className="text-amber-500 text-[10px] ml-1" style={{ fontFamily: 'Outfit_700Bold' }}>PRO</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text className="text-lumis-sunrise/40 text-sm">{user?.email || 'Member'}</Text>
                 </View>
               </View>
             </GlassCard>

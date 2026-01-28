@@ -1,168 +1,231 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, Clock } from 'lucide-react-native';
-import { requestScreenTimeAuthorization, showAppPicker } from '@/lib/screen-time';
-import { LumisHeroButton } from '@/components/ui/LumisHeroButton';
+import Svg, { Path } from 'react-native-svg';
+import { requestScreenTimeAuthorization } from '@/lib/screen-time';
+
+// Hand-drawn arrow SVG component
+function HandDrawnArrow() {
+    return (
+        <Svg width={60} height={80} viewBox="0 0 60 80">
+            <Path
+                d="M30 75 C25 60, 20 45, 22 30 C24 20, 28 12, 30 5"
+                stroke="#2196F3"
+                strokeWidth={3}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <Path
+                d="M22 15 L30 5 L38 15"
+                stroke="#2196F3"
+                strokeWidth={3}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </Svg>
+    );
+}
 
 export default function OnboardingPermissionScreenTimeScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const [isRequesting, setIsRequesting] = useState(false);
 
-    const handleAllow = async () => {
+    const handleContinue = async () => {
         if (isRequesting) return;
         setIsRequesting(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         try {
-            await requestScreenTimeAuthorization();
+            const result = await requestScreenTimeAuthorization();
+
+            // Check if permission was actually granted
+            if (result === true) {
+                // Permission granted - show celebration with first streak stone
+                router.push('/onboarding-first-streak');
+            } else {
+                // Permission denied - skip celebration
+                router.push('/onboarding-stakes-choice');
+            }
         } catch (e) {
             console.error('[Screen Time Permission] Error:', e);
+            // Still navigate even on error (skip celebration)
+            router.push('/onboarding-stakes-choice');
         } finally {
             setIsRequesting(false);
-            router.push('/onboarding-permission-notifications');
         }
     };
 
-    const handleBack = () => {
+    const handleDontAllow = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.back();
+        // Navigate without granting permission
+        router.push('/onboarding-stakes-choice');
     };
 
-
     return (
-        <View style={{ flex: 1 }}>
-            <LinearGradient
-                colors={['#87CEEB', '#B0E0E6', '#FFEB99', '#FFDAB9']}
-                locations={[0, 0.3, 0.7, 1]}
-                style={{ flex: 1 }}
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        paddingTop: insets.top + 16,
-                        paddingBottom: insets.bottom + 24,
-                        paddingHorizontal: 24,
-                    }}
-                >
-                    {/* Back Button */}
-                    <Pressable onPress={handleBack} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#1A1A2E" strokeWidth={2} />
-                    </Pressable>
+        <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
+            {/* Header Section */}
+            <Animated.View entering={FadeIn.duration(400)} style={styles.headerSection}>
+                <Text style={styles.headerTitle}>Connect Lumis to Screen{'\n'}Time, Securely.</Text>
+                <Text style={styles.headerSubtitle}>
+                    To analyse your Screen Time on this iPhone, Lumis will need your permission.
+                </Text>
+            </Animated.View>
 
-                    {/* Icon */}
-                    <Animated.View entering={FadeIn.duration(500)} style={styles.iconContainer}>
-                        <View style={styles.iconCircle}>
-                            <Clock size={48} color="#1A1A2E" strokeWidth={1.5} />
-                        </View>
-                    </Animated.View>
+            {/* Permission Dialog Box */}
+            <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.dialogContainer}>
+                <View style={styles.dialogBox}>
+                    <Text style={styles.dialogTitle}>"Lumis" Would Like to Access{'\n'}Screen Time</Text>
+                    <Text style={styles.dialogDescription}>
+                        Providing "Lumis" access to Screen Time may allow it to see your activity data, restrict content, and limit the usage of apps and websites.
+                    </Text>
 
-                    {/* Title & Description */}
-                    <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.textContainer}>
-                        <Text style={styles.title}>Lock distracting apps</Text>
-                        <Text style={styles.description}>
-                            We'll gently block your chosen apps until you've earned your morning light. This keeps your focus sharp.
-                        </Text>
-                    </Animated.View>
-
-                    {/* Spacer */}
-                    <View style={{ flex: 1 }} />
-
-                    {/* Buttons */}
-                    <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.buttonsContainer}>
-                        <View style={styles.allowButtonContainer}>
-                            <LumisHeroButton
-                                title={isRequesting ? 'Requesting...' : 'Allow Screen Time'}
-                                onPress={handleAllow}
-                                icon={<Clock size={20} color="#1A1A2E" strokeWidth={2.5} />}
-                                loading={isRequesting}
-                                disabled={isRequesting}
-                            />
-                        </View>
-
-                    </Animated.View>
+                    {/* Dialog Buttons */}
+                    <View style={styles.dialogButtonsContainer}>
+                        <Pressable
+                            onPress={handleContinue}
+                            style={styles.dialogButton}
+                            disabled={isRequesting}
+                        >
+                            <Text style={styles.dialogButtonTextBlue}>Continue</Text>
+                        </Pressable>
+                        <View style={styles.dialogButtonDivider} />
+                        <Pressable
+                            onPress={handleDontAllow}
+                            style={styles.dialogButton}
+                            disabled={isRequesting}
+                        >
+                            <Text style={styles.dialogButtonTextBlue}>Don't allow</Text>
+                        </Pressable>
+                    </View>
                 </View>
-            </LinearGradient>
+
+                {/* Hand-drawn arrow pointing to Continue */}
+                <View style={styles.arrowContainer}>
+                    <HandDrawnArrow />
+                </View>
+            </Animated.View>
+
+            {/* Spacer */}
+            <View style={{ flex: 1 }} />
+
+            {/* Footer Section */}
+            <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.footerSection}>
+                <Text style={styles.footerText}>
+                    Your information is protected by Apple and will stay 100% on your phone.
+                </Text>
+                <Pressable>
+                    <Text style={styles.learnMoreText}>Learn More</Text>
+                </Pressable>
+            </Animated.View>
+
+            {/* Bottom Spacing */}
+            <View style={{ height: insets.bottom + 20 }} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    backButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+    container: {
+        flex: 1,
+        backgroundColor: '#000000',
+        paddingHorizontal: 24,
     },
-    iconContainer: {
-        alignItems: 'center',
-        marginTop: 48,
+    headerSection: {
+        marginBottom: 60,
     },
-    iconCircle: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    textContainer: {
-        marginTop: 32,
-        alignItems: 'center',
-        paddingHorizontal: 16,
-    },
-    title: {
-        fontSize: 28,
+    headerTitle: {
+        fontSize: 32,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         textAlign: 'center',
         marginBottom: 16,
+        lineHeight: 40,
     },
-    description: {
+    headerSubtitle: {
         fontSize: 16,
         fontFamily: 'Outfit_400Regular',
-        color: '#333',
+        color: 'rgba(255, 255, 255, 0.6)',
         textAlign: 'center',
         lineHeight: 24,
     },
-    buttonsContainer: {
-        gap: 12,
-    },
-    allowButtonContainer: {
-        width: '100%',
-    },
-    allowButton: {
-        paddingVertical: 22,
-        borderRadius: 20,
+    dialogContainer: {
         alignItems: 'center',
-        shadowColor: '#FF8C00',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 10,
     },
-    allowButtonText: {
-        fontSize: 20,
-        fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+    dialogBox: {
+        backgroundColor: '#2C2C2E',
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#2196F3',
+        width: '90%',
+        maxWidth: 320,
+        overflow: 'hidden',
+    },
+    dialogTitle: {
+        fontSize: 17,
+        fontFamily: 'Outfit_600SemiBold',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        paddingTop: 20,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        lineHeight: 22,
+    },
+    dialogDescription: {
+        fontSize: 13,
+        fontFamily: 'Outfit_400Regular',
+        color: 'rgba(255, 255, 255, 0.6)',
+        textAlign: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        lineHeight: 18,
+    },
+    dialogButtonsContainer: {
+        flexDirection: 'row',
+        borderTopWidth: 0.5,
+        borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    dialogButton: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dialogButtonDivider: {
+        width: 0.5,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    dialogButtonTextBlue: {
+        fontSize: 17,
+        fontFamily: 'Outfit_400Regular',
+        color: '#0A84FF',
+    },
+    arrowContainer: {
+        marginTop: -10,
+        marginLeft: -80,
+        transform: [{ rotate: '15deg' }],
+    },
+    footerSection: {
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    footerText: {
+        fontSize: 14,
+        fontFamily: 'Outfit_400Regular',
+        color: 'rgba(255, 255, 255, 0.5)',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    learnMoreText: {
+        fontSize: 16,
+        fontFamily: 'Outfit_600SemiBold',
+        color: '#FFFFFF',
+        textAlign: 'center',
     },
 });

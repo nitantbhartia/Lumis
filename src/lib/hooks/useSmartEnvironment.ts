@@ -60,22 +60,35 @@ export function useSmartEnvironment() {
             if (luxPerm === 'granted') {
                 await LuxSensor.startAsync({ updateInterval: 1000 }).catch(() => { });
                 luxSub = LuxSensor.addLuxListener((data: any) => {
-                    const rawValue = typeof data === 'number' ? data : (data?.lux ?? data?.illuminance ?? 0);
-                    const currentLux = Math.round(Number(rawValue) || 0);
+                    if (!isMounted) return;
+
+                    // More robust parsing with logging
+                    let rawValue = 0;
+                    if (typeof data === 'number') {
+                        rawValue = data;
+                    } else if (data && typeof data === 'object') {
+                        rawValue = data.lux ?? data.illuminance ?? 0;
+                    }
+
+                    const currentLux = Math.max(0, Math.round(Number(rawValue) || 0));
+                    console.log('[Lux Sensor] Raw:', data, 'Parsed:', currentLux);
                     setLux(currentLux);
                 });
             } else if (isWeb) {
                 // Simulation for web/demo
                 simulationInterval = setInterval(() => {
-                    // Randomly alternate between indoors and outdoors for demo
-                    const rand = Math.random();
+                    const hour = new Date().getHours();
                     let simLux = 0;
-                    if (rand > 0.6) simLux = 15000 + Math.random() * 5000; // Outdoor
-                    else if (rand > 0.2) simLux = 300 + Math.random() * 400; // Indoor
-                    else simLux = 5 + Math.random() * 10; // Pocket/Night
+
+                    // Time-based simulation for demo
+                    if (hour >= 6 && hour <= 18) {
+                        simLux = 10000 + Math.random() * 10000; // Daytime outdoor
+                    } else {
+                        simLux = 200 + Math.random() * 300; // Indoor/Evening
+                    }
 
                     setLux(Math.round(simLux));
-                }, 5000);
+                }, 2000); // Update every 2s instead of 5s
             }
 
             // 3. Pedometer (Motion Signal)

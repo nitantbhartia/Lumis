@@ -4,7 +4,7 @@ import WidgetKit
 
 // MARK: - Activity Attributes
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 public struct LumisTrackingAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         public var remainingSeconds: Int
@@ -31,7 +31,7 @@ public struct LumisTrackingAttributes: ActivityAttributes {
 
 // MARK: - Live Activity Manager
 
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 public class LumisLiveActivityManager {
     public static let shared = LumisLiveActivityManager()
     private var currentActivity: Activity<LumisTrackingAttributes>?

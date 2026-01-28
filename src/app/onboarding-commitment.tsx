@@ -19,7 +19,7 @@ import * as Haptics from 'expo-haptics';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Lock, ArrowRight, CheckCircle, ArrowLeft, Smartphone, Ban, Sun, Flame } from 'lucide-react-native';
 import { Apple } from 'lucide-react-native';
-import { requestScreenTimeAuthorization, showAppPicker, LumisIcon } from '@/lib/screen-time';
+import { requestScreenTimeAuthorization, showAppPicker, LumisIcon, activateShield, syncShieldDisplayData } from '@/lib/screen-time';
 import { useLumisStore } from '@/lib/state/lumis-store';
 import { useAuthStore } from '@/lib/state/auth-store';
 import { formatFirstName } from '@/lib/utils/name-utils';
@@ -87,6 +87,12 @@ export default function OnboardingCommitmentScreen() {
                 const pickerResult = await showAppPicker();
                 if (pickerResult.success) {
                     await useLumisStore.getState().syncWithNativeBlockedApps();
+
+                    // Auto-activate shield immediately after app selection
+                    activateShield();
+                    syncShieldDisplayData();
+                    useLumisStore.getState().setShieldEngaged(true);
+
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     setIsLocked(true);
                     lockScale.value = withSequence(withSpring(1.2), withSpring(1));
@@ -136,7 +142,7 @@ export default function OnboardingCommitmentScreen() {
             });
             if (result.success) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                router.push('/onboarding-permission-motion');
+                router.push('/onboarding-stakes-choice');
             }
         } catch (e: any) {
             if (e.code !== 'ERR_CANCELED') alert('Sign in failed. Please try again.');
@@ -306,7 +312,7 @@ export default function OnboardingCommitmentScreen() {
                         {/* Apple Sign In / Continue */}
                         <Animated.View entering={FadeInUp.delay(600).duration(500)}>
                             <Pressable
-                                onPress={user ? () => router.push('/onboarding-permission-motion') : handleAppleSignIn}
+                                onPress={user ? () => router.push('/onboarding-stakes-choice') : handleAppleSignIn}
                                 disabled={isSigningIn}
                                 style={[
                                     styles.appleButton,
@@ -376,7 +382,7 @@ const styles = StyleSheet.create({
     headlineLight: {
         fontSize: isSmallDevice ? 28 : 34,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         textAlign: 'center',
         lineHeight: isSmallDevice ? 34 : 42,
     },
@@ -420,7 +426,7 @@ const styles = StyleSheet.create({
     },
     textBoldLight: {
         fontFamily: 'Outfit_600SemiBold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
     },
     howItWorksDividerLight: {
         height: 1,
@@ -462,7 +468,7 @@ const styles = StyleSheet.create({
     successHeadline: {
         fontSize: isSmallDevice ? 26 : 30,
         fontFamily: 'Outfit_700Bold',
-        color: '#1A1A2E',
+        color: '#FFFFFF',
         textAlign: 'center',
         lineHeight: isSmallDevice ? 32 : 38,
     },
@@ -501,7 +507,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 14,
-        backgroundColor: '#FFF',
+        backgroundColor: '#0F172A',
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',

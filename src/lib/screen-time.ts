@@ -15,7 +15,26 @@ import {
     isLiveActivityActive as nativeIsLiveActivityActive,
     areLiveActivitiesEnabled as nativeAreLiveActivitiesEnabled,
     updateShieldData as nativeUpdateShieldData,
-    LumisIcon
+    // Focus Score functions
+    scheduleFocusScoreReport as nativeScheduleFocusScoreReport,
+    stopFocusScoreMonitoring as nativeStopFocusScoreMonitoring,
+    getFocusScore as nativeGetFocusScore,
+    recordShieldPickup as nativeRecordShieldPickup,
+    markLuxDetected as nativeMarkLuxDetected,
+    resetDailyFocusData as nativeResetDailyFocusData,
+    getAvgDistractingMinutes as nativeGetAvgDistractingMinutes,
+    // Detailed usage functions
+    getDetailedUsageStats as nativeGetDetailedUsageStats,
+    getHourlyBreakdown as nativeGetHourlyBreakdown,
+    getAppUsageData as nativeGetAppUsageData,
+    getUsageForDate as nativeGetUsageForDate,
+    getAvailableHistoryDates as nativeGetAvailableHistoryDates,
+    LumisIcon,
+    type FocusScoreData,
+    type DetailedUsageStats,
+    type HourlyBreakdown,
+    type AppUsageItem,
+    type DailyUsageReport,
 } from 'lumisscreentime';
 import { requireNativeModule } from 'expo-modules-core';
 import { Platform, Alert, Linking } from 'react-native';
@@ -169,6 +188,10 @@ export const showAppPicker = async (): Promise<PickerResult> => {
 export const activateShield = (): boolean => {
     if (!isAvailable) return false;
     try {
+        // CRITICAL: Sync shield display data BEFORE activating
+        // This ensures the ShieldConfigurationExtension has current data when it loads
+        syncShieldDisplayData();
+
         const result = nativeActivateShield();
         console.log('[ScreenTime] activateShield result:', result);
 
@@ -399,3 +422,279 @@ export const syncShieldDisplayData = (): void => {
 };
 
 export { LumisIcon };
+
+// MARK: - Focus Score Functions
+
+/**
+ * Schedule the Focus Score monitoring for the morning window.
+ * Sets up DeviceActivityReport to run 60 minutes after wake time.
+ */
+export const scheduleFocusScoreReport = async (wakeHour: number, wakeMinute: number): Promise<boolean> => {
+    if (!isAvailable) return false;
+    try {
+        return await nativeScheduleFocusScoreReport(wakeHour, wakeMinute);
+    } catch (error) {
+        console.error('[ScreenTime] Error scheduling Focus Score report:', error);
+        return false;
+    }
+};
+
+/**
+ * Stop monitoring the focus score window.
+ */
+export const stopFocusScoreMonitoring = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeStopFocusScoreMonitoring();
+    } catch (error) {
+        console.error('[ScreenTime] Error stopping Focus Score monitoring:', error);
+    }
+};
+
+/**
+ * Get the current Focus Score from the extension's calculation.
+ */
+export const getFocusScore = (): FocusScoreData => {
+    if (!isAvailable) {
+        return {
+            score: 0,
+            timestamp: '',
+            distractingMinutes: 0,
+            sunlightBonusApplied: false,
+            focusRatio: 0,
+            penaltyDeductions: 0
+        };
+    }
+    try {
+        return nativeGetFocusScore();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting Focus Score:', error);
+        return {
+            score: 0,
+            timestamp: '',
+            distractingMinutes: 0,
+            sunlightBonusApplied: false,
+            focusRatio: 0,
+            penaltyDeductions: 0
+        };
+    }
+};
+
+/**
+ * Record a shield pickup (user attempted to open blocked app).
+ * Increments the penalty counter for Focus Score calculation.
+ */
+export const recordShieldPickup = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeRecordShieldPickup();
+        console.log('[ScreenTime] Shield pickup recorded');
+    } catch (error) {
+        console.error('[ScreenTime] Error recording shield pickup:', error);
+    }
+};
+
+/**
+ * Mark that user has achieved 120 seconds of outdoor lux today.
+ * Enables the sunlight bonus multiplier for Focus Score.
+ */
+export const markLuxDetected = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeMarkLuxDetected();
+        console.log('[ScreenTime] Lux threshold achieved - sunlight bonus enabled');
+    } catch (error) {
+        console.error('[ScreenTime] Error marking lux detected:', error);
+    }
+};
+
+/**
+ * Reset daily focus data counters.
+ * Call at the start of each new day.
+ */
+export const resetDailyFocusData = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeResetDailyFocusData();
+        console.log('[ScreenTime] Daily focus data reset');
+    } catch (error) {
+        console.error('[ScreenTime] Error resetting daily focus data:', error);
+    }
+};
+
+/**
+ * Get the 7-day average distracting minutes for "Time Saved" badge.
+ */
+export const getAvgDistractingMinutes = (): number => {
+    if (!isAvailable) return 0;
+    try {
+        return nativeGetAvgDistractingMinutes();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting avg distracting minutes:', error);
+        return 0;
+    }
+};
+
+// MARK: - Detailed Usage Data Functions
+
+/**
+ * Get detailed usage stats for the current day.
+ */
+export const getDetailedUsageStats = (): DetailedUsageStats => {
+    if (!isAvailable) {
+        return {
+            totalScreenTimeSeconds: 0,
+            productiveSeconds: 0,
+            distractingSeconds: 0,
+            neutralSeconds: 0,
+            totalPickups: 0,
+            totalNotifications: 0,
+            topApps: [],
+            focusScore: 0,
+            focusRatio: 0,
+            timestamp: ''
+        };
+    }
+    try {
+        return nativeGetDetailedUsageStats();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting detailed usage stats:', error);
+        return {
+            totalScreenTimeSeconds: 0,
+            productiveSeconds: 0,
+            distractingSeconds: 0,
+            neutralSeconds: 0,
+            totalPickups: 0,
+            totalNotifications: 0,
+            topApps: [],
+            focusScore: 0,
+            focusRatio: 0,
+            timestamp: ''
+        };
+    }
+};
+
+/**
+ * Get hourly breakdown data for charts.
+ */
+export const getHourlyBreakdown = (): HourlyBreakdown[] => {
+    if (!isAvailable) return [];
+    try {
+        return nativeGetHourlyBreakdown();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting hourly breakdown:', error);
+        return [];
+    }
+};
+
+/**
+ * Get app usage data for the list view.
+ */
+export const getAppUsageData = (): AppUsageItem[] => {
+    if (!isAvailable) return [];
+    try {
+        return nativeGetAppUsageData();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting app usage data:', error);
+        return [];
+    }
+};
+
+/**
+ * Get usage data for a specific date (historical).
+ * @param dateKey - Date in YYYY-MM-DD format
+ */
+export const getUsageForDate = (dateKey: string): DailyUsageReport | null => {
+    if (!isAvailable) return null;
+    try {
+        return nativeGetUsageForDate(dateKey);
+    } catch (error) {
+        console.error('[ScreenTime] Error getting usage for date:', error);
+        return null;
+    }
+};
+
+/**
+ * Get available history dates (last 30 days with data).
+ */
+export const getAvailableHistoryDates = (): string[] => {
+    if (!isAvailable) return [];
+    try {
+        return nativeGetAvailableHistoryDates();
+    } catch (error) {
+        console.error('[ScreenTime] Error getting available history dates:', error);
+        return [];
+    }
+};
+
+// MARK: - Daily Activity Monitoring
+
+import {
+    startDailyMonitoring as nativeStartDailyMonitoring,
+    stopDailyMonitoring as nativeStopDailyMonitoring,
+    isDailyMonitoringActive as nativeIsDailyMonitoringActive,
+    refreshScreenTimeData as nativeRefreshScreenTimeData,
+} from 'lumisscreentime';
+
+/**
+ * Start monitoring all device activity for the full day.
+ * This triggers the DeviceActivityMonitor extension to collect usage data.
+ * Call this once when the app starts or when screen time tracking is enabled.
+ */
+export const startDailyMonitoring = async (): Promise<boolean> => {
+    if (!isAvailable) return false;
+    try {
+        const result = await nativeStartDailyMonitoring();
+        console.log('[ScreenTime] Daily monitoring started:', result);
+        return result;
+    } catch (error) {
+        console.error('[ScreenTime] Error starting daily monitoring:', error);
+        return false;
+    }
+};
+
+/**
+ * Stop daily activity monitoring.
+ */
+export const stopDailyMonitoring = (): void => {
+    if (!isAvailable) return;
+    try {
+        nativeStopDailyMonitoring();
+        console.log('[ScreenTime] Daily monitoring stopped');
+    } catch (error) {
+        console.error('[ScreenTime] Error stopping daily monitoring:', error);
+    }
+};
+
+/**
+ * Check if daily monitoring is currently active.
+ */
+export const isDailyMonitoringActive = (): boolean => {
+    if (!isAvailable) return false;
+    try {
+        return nativeIsDailyMonitoringActive();
+    } catch (error) {
+        console.error('[ScreenTime] Error checking daily monitoring status:', error);
+        return false;
+    }
+};
+
+/**
+ * Trigger a refresh of screen time data by running the DeviceActivityReport extension.
+ * This collects per-app usage data, hourly breakdown, and updates the shared data store.
+ * Call this on dashboard load or when navigating to analytics screens.
+ */
+export const refreshScreenTimeData = async (): Promise<boolean> => {
+    if (!isAvailable) return false;
+    try {
+        console.log('[ScreenTime] Refreshing screen time data...');
+        const result = await nativeRefreshScreenTimeData();
+        console.log('[ScreenTime] Screen time data refresh result:', result);
+        return result;
+    } catch (error) {
+        console.error('[ScreenTime] Error refreshing screen time data:', error);
+        return false;
+    }
+};
+
+export type { FocusScoreData, DetailedUsageStats, HourlyBreakdown, AppUsageItem, DailyUsageReport };
